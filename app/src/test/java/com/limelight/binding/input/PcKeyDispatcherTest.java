@@ -159,6 +159,200 @@ public class PcKeyDispatcherTest {
     }
 
     @Test
+    public void latchedCtrlAppliesToLaterTapUntilExplicitlyReleased() {
+        FakeSender sender = new FakeSender();
+        PcKeyDispatcher dispatcher = new PcKeyDispatcher(sender);
+
+        assertTrue(dispatcher.toggleModifier(PcKeyDispatcher.Modifier.CTRL));
+        assertTrue(dispatcher.isModifierLatched(PcKeyDispatcher.Modifier.CTRL));
+        assertTrue(dispatcher.tapKey(KeyEvent.KEYCODE_A));
+        assertTrue(dispatcher.toggleModifier(PcKeyDispatcher.Modifier.CTRL));
+        assertFalse(dispatcher.isModifierLatched(PcKeyDispatcher.Modifier.CTRL));
+
+        assertEquals(3, sender.baseReadCount);
+        assertEvents(sender,
+                event(KeyEvent.KEYCODE_CTRL_LEFT, KeyboardPacket.KEY_DOWN,
+                        KeyboardPacket.MODIFIER_CTRL),
+                event(KeyEvent.KEYCODE_A, KeyboardPacket.KEY_DOWN,
+                        KeyboardPacket.MODIFIER_CTRL),
+                event(KeyEvent.KEYCODE_A, KeyboardPacket.KEY_UP,
+                        KeyboardPacket.MODIFIER_CTRL),
+                event(KeyEvent.KEYCODE_CTRL_LEFT, KeyboardPacket.KEY_UP, 0));
+    }
+
+    @Test
+    public void latchedCtrlAndShiftReleaseInReverseOrder() {
+        FakeSender sender = new FakeSender();
+        PcKeyDispatcher dispatcher = new PcKeyDispatcher(sender);
+
+        assertTrue(dispatcher.toggleModifier(PcKeyDispatcher.Modifier.CTRL));
+        assertTrue(dispatcher.toggleModifier(PcKeyDispatcher.Modifier.SHIFT));
+        dispatcher.releaseAll();
+        dispatcher.releaseAll();
+
+        assertFalse(dispatcher.isModifierLatched(PcKeyDispatcher.Modifier.CTRL));
+        assertFalse(dispatcher.isModifierLatched(PcKeyDispatcher.Modifier.SHIFT));
+        assertEvents(sender,
+                event(KeyEvent.KEYCODE_CTRL_LEFT, KeyboardPacket.KEY_DOWN,
+                        KeyboardPacket.MODIFIER_CTRL),
+                event(KeyEvent.KEYCODE_SHIFT_LEFT, KeyboardPacket.KEY_DOWN,
+                        KeyboardPacket.MODIFIER_CTRL | KeyboardPacket.MODIFIER_SHIFT),
+                event(KeyEvent.KEYCODE_SHIFT_LEFT, KeyboardPacket.KEY_UP,
+                        KeyboardPacket.MODIFIER_CTRL),
+                event(KeyEvent.KEYCODE_CTRL_LEFT, KeyboardPacket.KEY_UP, 0));
+    }
+
+    @Test
+    public void atomicShortcutDoesNotReleaseMatchingLatchedModifier() {
+        FakeSender sender = new FakeSender();
+        PcKeyDispatcher dispatcher = new PcKeyDispatcher(sender);
+
+        assertTrue(dispatcher.toggleModifier(PcKeyDispatcher.Modifier.CTRL));
+        assertTrue(dispatcher.dispatchShortcut(PcKeyDispatcher.PcShortcut.TASK_MANAGER));
+        assertTrue(dispatcher.isModifierLatched(PcKeyDispatcher.Modifier.CTRL));
+
+        assertEvents(sender,
+                event(KeyEvent.KEYCODE_CTRL_LEFT, KeyboardPacket.KEY_DOWN,
+                        KeyboardPacket.MODIFIER_CTRL),
+                event(KeyEvent.KEYCODE_SHIFT_LEFT, KeyboardPacket.KEY_DOWN,
+                        KeyboardPacket.MODIFIER_CTRL | KeyboardPacket.MODIFIER_SHIFT),
+                event(KeyEvent.KEYCODE_ESCAPE, KeyboardPacket.KEY_DOWN,
+                        KeyboardPacket.MODIFIER_CTRL | KeyboardPacket.MODIFIER_SHIFT),
+                event(KeyEvent.KEYCODE_ESCAPE, KeyboardPacket.KEY_UP,
+                        KeyboardPacket.MODIFIER_CTRL | KeyboardPacket.MODIFIER_SHIFT),
+                event(KeyEvent.KEYCODE_SHIFT_LEFT, KeyboardPacket.KEY_UP,
+                        KeyboardPacket.MODIFIER_CTRL));
+
+        dispatcher.releaseAll();
+        assertEquals(event(KeyEvent.KEYCODE_CTRL_LEFT, KeyboardPacket.KEY_UP, 0),
+                sender.events.get(sender.events.size() - 1));
+    }
+
+    @Test
+    public void latchIsRejectedWhenPhysicalBaseAlreadyOwnsModifier() {
+        FakeSender sender = new FakeSender();
+        sender.baseModifiers = KeyboardPacket.MODIFIER_CTRL;
+        PcKeyDispatcher dispatcher = new PcKeyDispatcher(sender);
+
+        assertFalse(dispatcher.toggleModifier(PcKeyDispatcher.Modifier.CTRL));
+
+        assertFalse(dispatcher.isModifierLatched(PcKeyDispatcher.Modifier.CTRL));
+        assertEquals(1, sender.baseReadCount);
+        assertEquals(0, sender.translateCalls);
+        assertTrue(sender.events.isEmpty());
+    }
+
+    @Test
+    public void disablingLatchTransfersOwnershipToHeldPhysicalModifier() {
+        FakeSender sender = new FakeSender();
+        PcKeyDispatcher dispatcher = new PcKeyDispatcher(sender);
+
+        assertTrue(dispatcher.toggleModifier(PcKeyDispatcher.Modifier.CTRL));
+        sender.baseModifiers = KeyboardPacket.MODIFIER_CTRL;
+        sender.exactBaseKeys.add(KeyEvent.KEYCODE_CTRL_LEFT);
+        int eventCountBeforeHandoff = sender.events.size();
+
+        assertTrue(dispatcher.toggleModifier(PcKeyDispatcher.Modifier.CTRL));
+
+        assertFalse(dispatcher.isModifierLatched(PcKeyDispatcher.Modifier.CTRL));
+        assertEquals(eventCountBeforeHandoff, sender.events.size());
+        assertEvents(sender,
+                event(KeyEvent.KEYCODE_CTRL_LEFT, KeyboardPacket.KEY_DOWN,
+                        KeyboardPacket.MODIFIER_CTRL));
+    }
+
+    @Test
+    public void rightPhysicalCtrlDoesNotStealLeftSyntheticOwnership() {
+        FakeSender sender = new FakeSender();
+        PcKeyDispatcher dispatcher = new PcKeyDispatcher(sender);
+
+        assertTrue(dispatcher.toggleModifier(PcKeyDispatcher.Modifier.CTRL));
+        // Aggregate BASE says Ctrl, but only the right-hand physical key is actually down.
+        sender.baseModifiers = KeyboardPacket.MODIFIER_CTRL;
+        sender.exactBaseKeys.add(KeyEvent.KEYCODE_CTRL_RIGHT);
+
+        assertTrue(dispatcher.toggleModifier(PcKeyDispatcher.Modifier.CTRL));
+
+        assertFalse(dispatcher.isModifierLatched(PcKeyDispatcher.Modifier.CTRL));
+        assertEvents(sender,
+                event(KeyEvent.KEYCODE_CTRL_LEFT, KeyboardPacket.KEY_DOWN,
+                        KeyboardPacket.MODIFIER_CTRL),
+                event(KeyEvent.KEYCODE_CTRL_LEFT, KeyboardPacket.KEY_UP,
+                        KeyboardPacket.MODIFIER_CTRL));
+    }
+
+    @Test
+    public void magnifierShortcutsUseTranslatorAndExpectedMetaChords() {
+        FakeSender sender = new FakeSender();
+        PcKeyDispatcher dispatcher = new PcKeyDispatcher(sender);
+
+        assertTrue(dispatcher.dispatchShortcut(PcKeyDispatcher.PcShortcut.MAGNIFIER_ZOOM_IN));
+        assertTrue(dispatcher.dispatchShortcut(PcKeyDispatcher.PcShortcut.MAGNIFIER_ZOOM_OUT));
+        assertTrue(dispatcher.dispatchShortcut(PcKeyDispatcher.PcShortcut.MAGNIFIER_CLOSE));
+
+        assertEquals(listOf(
+                        KeyEvent.KEYCODE_META_LEFT, KeyEvent.KEYCODE_EQUALS,
+                        KeyEvent.KEYCODE_META_LEFT, KeyEvent.KEYCODE_MINUS,
+                        KeyEvent.KEYCODE_META_LEFT, KeyEvent.KEYCODE_ESCAPE),
+                sender.translatedAndroidKeys);
+        assertEquals(12, sender.events.size());
+        assertMetaChord(sender.events, 0, KeyEvent.KEYCODE_EQUALS);
+        assertMetaChord(sender.events, 4, KeyEvent.KEYCODE_MINUS);
+        assertMetaChord(sender.events, 8, KeyEvent.KEYCODE_ESCAPE);
+    }
+
+    @Test
+    public void failedLatchDownIsUnwoundAndDoesNotRemainSelected() {
+        FakeSender sender = new FakeSender();
+        sender.failOnceOnSendNumber = 0;
+        PcKeyDispatcher dispatcher = new PcKeyDispatcher(sender);
+
+        assertFalse(dispatcher.toggleModifier(PcKeyDispatcher.Modifier.SHIFT));
+
+        assertFalse(dispatcher.isModifierLatched(PcKeyDispatcher.Modifier.SHIFT));
+        assertEvents(sender,
+                event(KeyEvent.KEYCODE_SHIFT_LEFT, KeyboardPacket.KEY_DOWN,
+                        KeyboardPacket.MODIFIER_SHIFT),
+                event(KeyEvent.KEYCODE_SHIFT_LEFT, KeyboardPacket.KEY_UP, 0));
+        int eventCount = sender.events.size();
+        dispatcher.releaseAll();
+        assertEquals(eventCount, sender.events.size());
+    }
+
+    @Test
+    public void failedUnlatchRemainsSelectedAndCanRetryKeyUp() {
+        FakeSender sender = new FakeSender();
+        PcKeyDispatcher dispatcher = new PcKeyDispatcher(sender);
+        assertTrue(dispatcher.toggleModifier(PcKeyDispatcher.Modifier.CTRL));
+        sender.failOnceOnSendNumber = 1;
+
+        assertFalse(dispatcher.toggleModifier(PcKeyDispatcher.Modifier.CTRL));
+        assertTrue(dispatcher.isModifierLatched(PcKeyDispatcher.Modifier.CTRL));
+
+        assertTrue(dispatcher.toggleModifier(PcKeyDispatcher.Modifier.CTRL));
+        assertFalse(dispatcher.isModifierLatched(PcKeyDispatcher.Modifier.CTRL));
+        assertEvents(sender,
+                event(KeyEvent.KEYCODE_CTRL_LEFT, KeyboardPacket.KEY_DOWN,
+                        KeyboardPacket.MODIFIER_CTRL),
+                event(KeyEvent.KEYCODE_CTRL_LEFT, KeyboardPacket.KEY_UP, 0),
+                event(KeyEvent.KEYCODE_CTRL_LEFT, KeyboardPacket.KEY_UP, 0));
+    }
+
+    @Test
+    public void disconnectWhileLatchedClearsLocalStateWithoutPackets() {
+        FakeSender sender = new FakeSender();
+        PcKeyDispatcher dispatcher = new PcKeyDispatcher(sender);
+        assertTrue(dispatcher.toggleModifier(PcKeyDispatcher.Modifier.CTRL));
+        int eventCountBeforeDisconnect = sender.events.size();
+
+        sender.ready = false;
+        dispatcher.releaseAll();
+
+        assertFalse(dispatcher.isModifierLatched(PcKeyDispatcher.Modifier.CTRL));
+        assertEquals(eventCountBeforeDisconnect, sender.events.size());
+    }
+
+    @Test
     public void notReadyProducesNoTranslationOrPackets() {
         FakeSender sender = new FakeSender();
         sender.ready = false;
@@ -302,6 +496,17 @@ public class PcKeyDispatcherTest {
                 events.get(offset + 3));
     }
 
+    private static void assertMetaChord(List<Event> events, int offset, int mainKeyCode) {
+        assertEquals(event(KeyEvent.KEYCODE_META_LEFT, KeyboardPacket.KEY_DOWN,
+                KeyboardPacket.MODIFIER_META), events.get(offset));
+        assertEquals(event(mainKeyCode, KeyboardPacket.KEY_DOWN,
+                KeyboardPacket.MODIFIER_META), events.get(offset + 1));
+        assertEquals(event(mainKeyCode, KeyboardPacket.KEY_UP,
+                KeyboardPacket.MODIFIER_META), events.get(offset + 2));
+        assertEquals(event(KeyEvent.KEYCODE_META_LEFT, KeyboardPacket.KEY_UP, 0),
+                events.get(offset + 3));
+    }
+
     private static void assertEvents(FakeSender sender, Event... expected) {
         assertEquals(listOf(expected), sender.events);
         for (Event event : sender.events) {
@@ -336,6 +541,7 @@ public class PcKeyDispatcherTest {
         private int failOnceOnSendNumber = -1;
         private boolean failureTriggered;
         private final Set<Integer> untranslatableKeys = new HashSet<>();
+        private final Set<Integer> exactBaseKeys = new HashSet<>();
         private final List<Integer> translatedAndroidKeys = new ArrayList<>();
         private final List<Event> events = new ArrayList<>();
 
@@ -348,6 +554,11 @@ public class PcKeyDispatcherTest {
         public byte getBaseModifiers() {
             baseReadCount++;
             return baseModifiers;
+        }
+
+        @Override
+        public boolean isBaseKeyDown(int androidKeyCode) {
+            return exactBaseKeys.contains(androidKeyCode);
         }
 
         @Override

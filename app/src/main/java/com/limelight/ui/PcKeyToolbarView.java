@@ -47,6 +47,9 @@ public final class PcKeyToolbarView extends FrameLayout {
 
         void onShortcutRequested(PcKeyDispatcher.PcShortcut shortcut);
 
+        default void onModifierToggleRequested(PcKeyDispatcher.Modifier modifier) {
+        }
+
         void onSessionHideRequested();
 
         void onInputCancelled();
@@ -55,6 +58,13 @@ public final class PcKeyToolbarView extends FrameLayout {
     private enum DockSide {
         LEFT,
         RIGHT
+    }
+
+    private enum ShortcutGroup {
+        WINDOWS,
+        WINDOW,
+        EDIT,
+        SYSTEM
     }
 
     private final SharedPreferences preferences;
@@ -69,9 +79,25 @@ public final class PcKeyToolbarView extends FrameLayout {
     private TextView collapsedButton;
     private View expandedPanel;
     private HorizontalScrollView primaryScroll;
-    private HorizontalScrollView secondaryScroll;
     private View primaryRow;
-    private View secondaryRow;
+    private TextView ctrlButton;
+    private TextView shiftButton;
+    private TextView shortcutsButton;
+    private View shortcutPanel;
+    private HorizontalScrollView groupScroll;
+    private HorizontalScrollView windowsScroll;
+    private HorizontalScrollView windowScroll;
+    private HorizontalScrollView editScroll;
+    private HorizontalScrollView systemScroll;
+    private View groupRow;
+    private View windowsRow;
+    private View windowRow;
+    private View editRow;
+    private View systemRow;
+    private TextView windowsGroupButton;
+    private TextView windowGroupButton;
+    private TextView editGroupButton;
+    private TextView systemGroupButton;
 
     private Listener listener;
     private DockSide dockSide;
@@ -80,6 +106,7 @@ public final class PcKeyToolbarView extends FrameLayout {
     private boolean sessionHidden;
     private boolean hostVisible = true;
     private boolean positionReady;
+    private ShortcutGroup activeShortcutGroup = ShortcutGroup.WINDOWS;
 
     private float downRawX;
     private float downRawY;
@@ -129,9 +156,25 @@ public final class PcKeyToolbarView extends FrameLayout {
         collapsedButton = findViewById(R.id.pc_key_collapsed_button);
         expandedPanel = findViewById(R.id.pc_key_expanded_panel);
         primaryScroll = findViewById(R.id.pc_key_primary_scroll);
-        secondaryScroll = findViewById(R.id.pc_key_secondary_scroll);
         primaryRow = findViewById(R.id.pc_key_primary_row);
-        secondaryRow = findViewById(R.id.pc_key_secondary_row);
+        ctrlButton = findViewById(R.id.pc_key_ctrl);
+        shiftButton = findViewById(R.id.pc_key_shift);
+        shortcutsButton = findViewById(R.id.pc_key_shortcuts);
+        shortcutPanel = findViewById(R.id.pc_key_shortcut_panel);
+        groupScroll = findViewById(R.id.pc_key_group_scroll);
+        windowsScroll = findViewById(R.id.pc_key_windows_scroll);
+        windowScroll = findViewById(R.id.pc_key_window_scroll);
+        editScroll = findViewById(R.id.pc_key_edit_scroll);
+        systemScroll = findViewById(R.id.pc_key_system_scroll);
+        groupRow = findViewById(R.id.pc_key_group_row);
+        windowsRow = findViewById(R.id.pc_key_windows_row);
+        windowRow = findViewById(R.id.pc_key_window_row);
+        editRow = findViewById(R.id.pc_key_edit_row);
+        systemRow = findViewById(R.id.pc_key_system_row);
+        windowsGroupButton = findViewById(R.id.pc_key_group_windows);
+        windowGroupButton = findViewById(R.id.pc_key_group_window);
+        editGroupButton = findViewById(R.id.pc_key_group_edit);
+        systemGroupButton = findViewById(R.id.pc_key_group_system);
 
         dockSide = DOCK_LEFT.equals(preferences.getString(PREF_DOCK_SIDE, DOCK_RIGHT))
                 ? DockSide.LEFT : DockSide.RIGHT;
@@ -139,6 +182,8 @@ public final class PcKeyToolbarView extends FrameLayout {
 
         configureLabels();
         configureButtons();
+        setModifierLatched(false, false);
+        showShortcutGroup(ShortcutGroup.WINDOWS);
         makeTreeNonFocusable(this);
 
         collapsedButton.setOnTouchListener(this::handleCollapsedButtonTouch);
@@ -159,6 +204,9 @@ public final class PcKeyToolbarView extends FrameLayout {
         });
 
         bindKeyButton(R.id.pc_key_win, KeyEvent.KEYCODE_META_LEFT);
+        bindModifierButton(R.id.pc_key_ctrl, PcKeyDispatcher.Modifier.CTRL);
+        bindModifierButton(R.id.pc_key_shift, PcKeyDispatcher.Modifier.SHIFT);
+        bindKeyButton(R.id.pc_key_caps, KeyEvent.KEYCODE_CAPS_LOCK);
         bindKeyButton(R.id.pc_key_escape, KeyEvent.KEYCODE_ESCAPE);
         bindKeyButton(R.id.pc_key_tab, KeyEvent.KEYCODE_TAB);
         bindKeyButton(R.id.pc_key_left, KeyEvent.KEYCODE_DPAD_LEFT);
@@ -166,13 +214,34 @@ public final class PcKeyToolbarView extends FrameLayout {
         bindKeyButton(R.id.pc_key_down, KeyEvent.KEYCODE_DPAD_DOWN);
         bindKeyButton(R.id.pc_key_right, KeyEvent.KEYCODE_DPAD_RIGHT);
 
-        findViewById(R.id.pc_key_shortcuts).setOnClickListener(view -> toggleShortcutRow());
+        shortcutsButton.setOnClickListener(view -> toggleShortcutPanel());
         findViewById(R.id.pc_key_collapse).setOnClickListener(view -> collapse());
+
+        windowsGroupButton.setOnClickListener(view -> showShortcutGroup(ShortcutGroup.WINDOWS));
+        windowGroupButton.setOnClickListener(view -> showShortcutGroup(ShortcutGroup.WINDOW));
+        editGroupButton.setOnClickListener(view -> showShortcutGroup(ShortcutGroup.EDIT));
+        systemGroupButton.setOnClickListener(view -> showShortcutGroup(ShortcutGroup.SYSTEM));
 
         bindShortcutButton(R.id.pc_key_shortcut_win_e, PcKeyDispatcher.PcShortcut.WIN_E);
         bindShortcutButton(R.id.pc_key_shortcut_win_r, PcKeyDispatcher.PcShortcut.WIN_R);
+        bindShortcutButton(R.id.pc_key_shortcut_win_d, PcKeyDispatcher.PcShortcut.WIN_D);
+        bindShortcutButton(R.id.pc_key_shortcut_win_tab, PcKeyDispatcher.PcShortcut.WIN_TAB);
+        bindShortcutButton(R.id.pc_key_shortcut_magnifier_zoom_in,
+                PcKeyDispatcher.PcShortcut.MAGNIFIER_ZOOM_IN);
+        bindShortcutButton(R.id.pc_key_shortcut_magnifier_zoom_out,
+                PcKeyDispatcher.PcShortcut.MAGNIFIER_ZOOM_OUT);
+        bindShortcutButton(R.id.pc_key_shortcut_magnifier_close,
+                PcKeyDispatcher.PcShortcut.MAGNIFIER_CLOSE);
         bindShortcutButton(R.id.pc_key_shortcut_previous_window,
                 PcKeyDispatcher.PcShortcut.PREVIOUS_WINDOW);
+        bindShortcutButton(R.id.pc_key_shortcut_shift_tab,
+                PcKeyDispatcher.PcShortcut.REVERSE_WINDOW);
+        bindShortcutButton(R.id.pc_key_shortcut_ctrl_a, PcKeyDispatcher.PcShortcut.CTRL_A);
+        bindShortcutButton(R.id.pc_key_shortcut_ctrl_c, PcKeyDispatcher.PcShortcut.CTRL_C);
+        bindShortcutButton(R.id.pc_key_shortcut_ctrl_x, PcKeyDispatcher.PcShortcut.CTRL_X);
+        bindShortcutButton(R.id.pc_key_shortcut_ctrl_v, PcKeyDispatcher.PcShortcut.CTRL_V);
+        bindShortcutButton(R.id.pc_key_shortcut_ctrl_z, PcKeyDispatcher.PcShortcut.CTRL_Z);
+        bindShortcutButton(R.id.pc_key_shortcut_ctrl_y, PcKeyDispatcher.PcShortcut.CTRL_Y);
         bindShortcutButton(R.id.pc_key_shortcut_task_manager,
                 PcKeyDispatcher.PcShortcut.TASK_MANAGER);
 
@@ -192,6 +261,14 @@ public final class PcKeyToolbarView extends FrameLayout {
         });
     }
 
+    private void bindModifierButton(int viewId, PcKeyDispatcher.Modifier modifier) {
+        findViewById(viewId).setOnClickListener(view -> {
+            if (listener != null) {
+                listener.onModifierToggleRequested(modifier);
+            }
+        });
+    }
+
     private void bindShortcutButton(int viewId, PcKeyDispatcher.PcShortcut shortcut) {
         findViewById(viewId).setOnClickListener(view -> {
             if (listener != null) {
@@ -203,6 +280,28 @@ public final class PcKeyToolbarView extends FrameLayout {
     /** Supplies callbacks for UI actions. Passing {@code null} safely disables dispatch. */
     public void setListener(Listener listener) {
         this.listener = listener;
+    }
+
+    /** Updates the visual and accessibility state of the two latched modifiers. */
+    public void setModifierLatched(boolean ctrlLatched, boolean shiftLatched) {
+        setModifierButtonState(ctrlButton, ctrlLatched,
+                R.string.pc_key_toolbar_ctrl_description,
+                R.string.pc_key_toolbar_ctrl_description_on);
+        setModifierButtonState(shiftButton, shiftLatched,
+                R.string.pc_key_toolbar_shift_description,
+                R.string.pc_key_toolbar_shift_description_on);
+    }
+
+    private void setModifierButtonState(TextView button, boolean latched,
+                                        int inactiveDescription, int activeDescription) {
+        if (button == null) {
+            return;
+        }
+
+        button.setActivated(latched);
+        button.setSelected(latched);
+        button.setContentDescription(getResources().getText(
+                latched ? activeDescription : inactiveDescription));
     }
 
     /** Resets transient state for a new stream while preserving the user's saved dock position. */
@@ -259,7 +358,8 @@ public final class PcKeyToolbarView extends FrameLayout {
         expanded = true;
         collapsedButton.setVisibility(GONE);
         expandedPanel.setVisibility(VISIBLE);
-        secondaryScroll.setVisibility(GONE);
+        shortcutPanel.setVisibility(GONE);
+        setGroupButtonActive(shortcutsButton, false);
         resizeAndReposition();
         primaryScroll.post(() -> primaryScroll.scrollTo(0, 0));
         ensureOnTop();
@@ -274,8 +374,11 @@ public final class PcKeyToolbarView extends FrameLayout {
         if (expandedPanel != null) {
             expandedPanel.setVisibility(GONE);
         }
-        if (secondaryScroll != null) {
-            secondaryScroll.setVisibility(GONE);
+        if (shortcutPanel != null) {
+            shortcutPanel.setVisibility(GONE);
+        }
+        if (shortcutsButton != null) {
+            setGroupButtonActive(shortcutsButton, false);
         }
         resizeAndReposition();
     }
@@ -331,6 +434,14 @@ public final class PcKeyToolbarView extends FrameLayout {
         }
     }
 
+    @Override
+    public boolean dispatchTouchEvent(MotionEvent event) {
+        if (event.getActionMasked() == MotionEvent.ACTION_CANCEL && listener != null) {
+            listener.onInputCancelled();
+        }
+        return super.dispatchTouchEvent(event);
+    }
+
     private boolean handleCollapsedButtonTouch(View view, MotionEvent event) {
         switch (event.getActionMasked()) {
             case MotionEvent.ACTION_DOWN:
@@ -379,9 +490,6 @@ public final class PcKeyToolbarView extends FrameLayout {
                     reposition();
                 }
                 dragging = false;
-                if (listener != null) {
-                    listener.onInputCancelled();
-                }
                 return true;
 
             default:
@@ -433,12 +541,53 @@ public final class PcKeyToolbarView extends FrameLayout {
                 .apply();
     }
 
-    private void toggleShortcutRow() {
-        secondaryScroll.setVisibility(
-                secondaryScroll.getVisibility() == VISIBLE ? GONE : VISIBLE);
+    private void toggleShortcutPanel() {
+        boolean show = shortcutPanel.getVisibility() != VISIBLE;
+        shortcutPanel.setVisibility(show ? VISIBLE : GONE);
+        setGroupButtonActive(shortcutsButton, show);
+        if (show) {
+            showShortcutGroup(activeShortcutGroup);
+            groupScroll.post(() -> groupScroll.scrollTo(0, 0));
+        }
+        else {
+            resizeAndReposition();
+        }
+    }
+
+    private void showShortcutGroup(ShortcutGroup group) {
+        activeShortcutGroup = group;
+
+        windowsScroll.setVisibility(group == ShortcutGroup.WINDOWS ? VISIBLE : GONE);
+        windowScroll.setVisibility(group == ShortcutGroup.WINDOW ? VISIBLE : GONE);
+        editScroll.setVisibility(group == ShortcutGroup.EDIT ? VISIBLE : GONE);
+        systemScroll.setVisibility(group == ShortcutGroup.SYSTEM ? VISIBLE : GONE);
+
+        setGroupButtonActive(windowsGroupButton, group == ShortcutGroup.WINDOWS);
+        setGroupButtonActive(windowGroupButton, group == ShortcutGroup.WINDOW);
+        setGroupButtonActive(editGroupButton, group == ShortcutGroup.EDIT);
+        setGroupButtonActive(systemGroupButton, group == ShortcutGroup.SYSTEM);
+
         resizeAndReposition();
-        if (secondaryScroll.getVisibility() == VISIBLE) {
-            secondaryScroll.post(() -> secondaryScroll.scrollTo(0, 0));
+        HorizontalScrollView activeScroll = getActiveShortcutScroll();
+        activeScroll.post(() -> activeScroll.scrollTo(0, 0));
+    }
+
+    private static void setGroupButtonActive(TextView button, boolean active) {
+        button.setActivated(active);
+        button.setSelected(active);
+    }
+
+    private HorizontalScrollView getActiveShortcutScroll() {
+        switch (activeShortcutGroup) {
+            case WINDOW:
+                return windowScroll;
+            case EDIT:
+                return editScroll;
+            case SYSTEM:
+                return systemScroll;
+            case WINDOWS:
+            default:
+                return windowsScroll;
         }
     }
 
@@ -501,9 +650,12 @@ public final class PcKeyToolbarView extends FrameLayout {
         int unspecified = MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED);
         primaryRow.measure(unspecified, unspecified);
         int naturalWidth = primaryRow.getMeasuredWidth();
-        if (secondaryScroll.getVisibility() == VISIBLE) {
-            secondaryRow.measure(unspecified, unspecified);
-            naturalWidth = Math.max(naturalWidth, secondaryRow.getMeasuredWidth());
+        if (shortcutPanel.getVisibility() == VISIBLE) {
+            groupRow.measure(unspecified, unspecified);
+            View activeRow = getActiveShortcutRow();
+            activeRow.measure(unspecified, unspecified);
+            naturalWidth = Math.max(naturalWidth,
+                    Math.max(groupRow.getMeasuredWidth(), activeRow.getMeasuredWidth()));
         }
         naturalWidth += expandedPanel.getPaddingLeft() + expandedPanel.getPaddingRight();
 
@@ -515,6 +667,20 @@ public final class PcKeyToolbarView extends FrameLayout {
         if (params.width != desiredWidth) {
             params.width = desiredWidth;
             expandedPanel.setLayoutParams(params);
+        }
+    }
+
+    private View getActiveShortcutRow() {
+        switch (activeShortcutGroup) {
+            case WINDOW:
+                return windowRow;
+            case EDIT:
+                return editRow;
+            case SYSTEM:
+                return systemRow;
+            case WINDOWS:
+            default:
+                return windowsRow;
         }
     }
 

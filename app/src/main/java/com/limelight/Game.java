@@ -140,6 +140,12 @@ public class Game extends Activity implements SurfaceHolder.Callback,
 
     private InputCaptureProvider inputCaptureProvider;
     private int modifierFlags = 0;
+    // Exact left-side state is required to hand toolbar ownership back to the same physical key.
+    // Root evdev callbacks can run off the UI thread, so KATO tracking is disabled for root builds.
+    private boolean physicalLeftCtrlDown;
+    private boolean physicalRightCtrlDown;
+    private boolean physicalLeftShiftDown;
+    private boolean physicalRightShiftDown;
     private boolean grabbedInput = true;
     private boolean cursorVisible = false;
     private boolean waitingForAllModifiersUp = false;
@@ -305,7 +311,17 @@ public class Game extends Activity implements SurfaceHolder.Callback,
                 }
 
                 @Override
+                public void onModifierToggleRequested(PcKeyDispatcher.Modifier modifier) {
+                    if (pcKeyDispatcher != null) {
+                        pcKeyDispatcher.toggleModifier(modifier);
+                        syncPcModifierUi();
+                    }
+                }
+
+                @Override
                 public void onSessionHideRequested() {
+                    // A hidden toolbar provides no way to turn a latch back off, so release first.
+                    releaseAllKeyboardState();
                     pcKeyToolbarView.hideForSession();
                 }
 
@@ -313,6 +329,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
                 public void onInputCancelled() {
                     if (pcKeyDispatcher != null) {
                         pcKeyDispatcher.releaseAll();
+                        syncPcModifierUi();
                     }
                 }
             });
@@ -543,7 +560,12 @@ public class Game extends Activity implements SurfaceHolder.Callback,
 
             @Override
             public byte getBaseModifiers() {
-                return getModifierState();
+                return getPhysicalModifierState();
+            }
+
+            @Override
+            public boolean isBaseKeyDown(int androidKeyCode) {
+                return isExactPhysicalModifierKeyDown(androidKeyCode);
             }
 
             @Override
@@ -1291,6 +1313,21 @@ public class Game extends Activity implements SurfaceHolder.Callback,
 
     // Returns true if the key stroke was consumed
     private boolean handleSpecialKeys(int androidKeyCode, boolean down) {
+        if (!BuildConfig.ROOT_BUILD) {
+            if (androidKeyCode == KeyEvent.KEYCODE_CTRL_LEFT) {
+                physicalLeftCtrlDown = down;
+            }
+            else if (androidKeyCode == KeyEvent.KEYCODE_CTRL_RIGHT) {
+                physicalRightCtrlDown = down;
+            }
+            else if (androidKeyCode == KeyEvent.KEYCODE_SHIFT_LEFT) {
+                physicalLeftShiftDown = down;
+            }
+            else if (androidKeyCode == KeyEvent.KEYCODE_SHIFT_RIGHT) {
+                physicalRightShiftDown = down;
+            }
+        }
+
         int modifierMask = 0;
         int nonModifierKeyCode = KeyEvent.KEYCODE_UNKNOWN;
 
@@ -1418,7 +1455,60 @@ public class Game extends Activity implements SurfaceHolder.Callback,
     }
 
     private byte getModifierState() {
-        return (byte) modifierFlags;
+        int modifiers = getPhysicalModifierState() & 0xFF;
+        if (pcKeyDispatcher != null) {
+            if (pcKeyDispatcher.isModifierLatched(PcKeyDispatcher.Modifier.CTRL)) {
+                modifiers |= KeyboardPacket.MODIFIER_CTRL;
+            }
+            if (pcKeyDispatcher.isModifierLatched(PcKeyDispatcher.Modifier.SHIFT)) {
+                modifiers |= KeyboardPacket.MODIFIER_SHIFT;
+            }
+        }
+        return (byte) modifiers;
+    }
+
+    /** Returns only physical/IME state for PcKeyDispatcher's BASE ownership calculation. */
+    private byte getPhysicalModifierState() {
+        int modifiers = modifierFlags;
+        if (!BuildConfig.ROOT_BUILD) {
+            if (physicalLeftCtrlDown || physicalRightCtrlDown) {
+                modifiers |= KeyboardPacket.MODIFIER_CTRL;
+            }
+            if (physicalLeftShiftDown || physicalRightShiftDown) {
+                modifiers |= KeyboardPacket.MODIFIER_SHIFT;
+            }
+        }
+        return (byte) modifiers;
+    }
+
+    private boolean isToolbarModifierLatched(int androidKeyCode) {
+        if (pcKeyDispatcher == null) {
+            return false;
+        }
+
+        switch (androidKeyCode) {
+            case KeyEvent.KEYCODE_CTRL_LEFT:
+                return pcKeyDispatcher.isModifierLatched(PcKeyDispatcher.Modifier.CTRL);
+            case KeyEvent.KEYCODE_SHIFT_LEFT:
+                return pcKeyDispatcher.isModifierLatched(PcKeyDispatcher.Modifier.SHIFT);
+            default:
+                return false;
+        }
+    }
+
+    private boolean isExactPhysicalModifierKeyDown(int androidKeyCode) {
+        if (BuildConfig.ROOT_BUILD) {
+            return false;
+        }
+
+        switch (androidKeyCode) {
+            case KeyEvent.KEYCODE_CTRL_LEFT:
+                return physicalLeftCtrlDown;
+            case KeyEvent.KEYCODE_SHIFT_LEFT:
+                return physicalLeftShiftDown;
+            default:
+                return false;
+        }
     }
 
     /**
@@ -1430,8 +1520,13 @@ public class Game extends Activity implements SurfaceHolder.Callback,
             pcKeyDispatcher.releaseAll();
         }
         modifierFlags = 0;
+        physicalLeftCtrlDown = false;
+        physicalRightCtrlDown = false;
+        physicalLeftShiftDown = false;
+        physicalRightShiftDown = false;
         waitingForAllModifiersUp = false;
         specialKeyCode = KeyEvent.KEYCODE_UNKNOWN;
+        syncPcModifierUi();
     }
 
     @Override
@@ -1476,8 +1571,17 @@ public class Game extends Activity implements SurfaceHolder.Callback,
 
         // Try the keyboard handler if it wasn't handled as a game controller
         if (!handled) {
+            boolean suppressLatchedModifierPacket =
+                    isToolbarModifierLatched(event.getKeyCode());
+
             // Let this method take duplicate key down events
             if (handleSpecialKeys(event.getKeyCode(), true)) {
+                return true;
+            }
+
+            // The toolbar already sent this modifier's KEY_DOWN. We still updated the physical
+            // BASE state above, but a duplicate packet would make ownership ambiguous later.
+            if (suppressLatchedModifierPacket) {
                 return true;
             }
 
@@ -1556,7 +1660,16 @@ public class Game extends Activity implements SurfaceHolder.Callback,
 
         // Try the keyboard handler if it wasn't handled as a game controller
         if (!handled) {
+            boolean suppressLatchedModifierPacket =
+                    isToolbarModifierLatched(event.getKeyCode());
+
             if (handleSpecialKeys(event.getKeyCode(), false)) {
+                return true;
+            }
+
+            // Keep the remote modifier held until the toolbar latch is released. The physical
+            // BASE snapshot was still updated by handleSpecialKeys().
+            if (suppressLatchedModifierPacket) {
                 return true;
             }
 
@@ -2574,6 +2687,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
 
                 if (pcKeyToolbarView != null) {
                     pcKeyToolbarView.resetForSession();
+                    syncPcModifierUi();
                     pcKeyToolbarView.reposition();
                     updatePcKeyToolbarVisibility();
                 }
@@ -2795,8 +2909,14 @@ public class Game extends Activity implements SurfaceHolder.Callback,
     public void keyboardEvent(boolean buttonDown, short keyCode) {
         short keyMap = keyboardTranslator.translate(keyCode, -1);
         if (keyMap != 0) {
+            boolean suppressLatchedModifierPacket = isToolbarModifierLatched(keyCode);
+
             // handleSpecialKeys() takes the Android keycode
             if (handleSpecialKeys(keyCode, buttonDown)) {
+                return;
+            }
+
+            if (suppressLatchedModifierPacket) {
                 return;
             }
 
@@ -2807,6 +2927,18 @@ public class Game extends Activity implements SurfaceHolder.Callback,
                 conn.sendKeyboardInput(keyMap, KeyboardPacket.KEY_UP, getModifierState(), (byte)0);
             }
         }
+    }
+
+    private void syncPcModifierUi() {
+        if (pcKeyToolbarView == null) {
+            return;
+        }
+
+        boolean ctrlLatched = pcKeyDispatcher != null &&
+                pcKeyDispatcher.isModifierLatched(PcKeyDispatcher.Modifier.CTRL);
+        boolean shiftLatched = pcKeyDispatcher != null &&
+                pcKeyDispatcher.isModifierLatched(PcKeyDispatcher.Modifier.SHIFT);
+        pcKeyToolbarView.setModifierLatched(ctrlLatched, shiftLatched);
     }
 
     private void updatePcKeyToolbarVisibility() {

@@ -8,11 +8,13 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Sends tap-only PC keys and shortcuts without mutating the physical keyboard modifier state.
+ * Sends PC keys, latched modifiers, and fixed shortcuts without mutating Game's physical
+ * modifier snapshot.
  *
  * <p>The dispatcher is deliberately independent of {@code NvConnection}. The activity supplies a
  * {@link HostKeySender} that delegates to the active connection, while unit tests can supply a fake
- * sender without loading MoonBridge's native library.</p>
+ * sender without loading MoonBridge's native library. Every public operation is synchronized so a
+ * shortcut cannot interleave with another shortcut or a modifier transition.</p>
  */
 public final class PcKeyDispatcher {
     private static final byte NORMALIZED_FLAGS = 0;
@@ -21,7 +23,7 @@ public final class PcKeyDispatcher {
             KeyboardPacket.MODIFIER_ALT |
             KeyboardPacket.MODIFIER_META;
 
-    // The order here is also the key-down order. Key-up is always the reverse order.
+    // The order here is also the temporary key-down order. Key-up is always the reverse order.
     private static final ModifierKey[] MODIFIER_KEYS = {
             new ModifierKey(KeyboardPacket.MODIFIER_CTRL, KeyEvent.KEYCODE_CTRL_LEFT),
             new ModifierKey(KeyboardPacket.MODIFIER_SHIFT, KeyEvent.KEYCODE_SHIFT_LEFT),
@@ -29,11 +31,38 @@ public final class PcKeyDispatcher {
             new ModifierKey(KeyboardPacket.MODIFIER_META, KeyEvent.KEYCODE_META_LEFT),
     };
 
-    /** The fixed set of shortcuts exposed by the v0.1 toolbar. */
+    /** Modifiers that the v0.2 toolbar can keep held until the user taps them again. */
+    public enum Modifier {
+        CTRL(KeyboardPacket.MODIFIER_CTRL, KeyEvent.KEYCODE_CTRL_LEFT),
+        SHIFT(KeyboardPacket.MODIFIER_SHIFT, KeyEvent.KEYCODE_SHIFT_LEFT);
+
+        private final int mask;
+        private final int androidKeyCode;
+
+        Modifier(int mask, int androidKeyCode) {
+            this.mask = mask;
+            this.androidKeyCode = androidKeyCode;
+        }
+    }
+
+    /** Fixed, atomic shortcuts exposed by the grouped v0.2 menu. */
     public enum PcShortcut {
         WIN_E(KeyEvent.KEYCODE_E, KeyboardPacket.MODIFIER_META),
         WIN_R(KeyEvent.KEYCODE_R, KeyboardPacket.MODIFIER_META),
+        WIN_D(KeyEvent.KEYCODE_D, KeyboardPacket.MODIFIER_META),
+        WIN_TAB(KeyEvent.KEYCODE_TAB, KeyboardPacket.MODIFIER_META),
+        MAGNIFIER_ZOOM_IN(KeyEvent.KEYCODE_EQUALS, KeyboardPacket.MODIFIER_META),
+        MAGNIFIER_ZOOM_OUT(KeyEvent.KEYCODE_MINUS, KeyboardPacket.MODIFIER_META),
+        MAGNIFIER_CLOSE(KeyEvent.KEYCODE_ESCAPE, KeyboardPacket.MODIFIER_META),
         PREVIOUS_WINDOW(KeyEvent.KEYCODE_TAB, KeyboardPacket.MODIFIER_ALT),
+        REVERSE_WINDOW(KeyEvent.KEYCODE_TAB,
+                KeyboardPacket.MODIFIER_ALT | KeyboardPacket.MODIFIER_SHIFT),
+        CTRL_A(KeyEvent.KEYCODE_A, KeyboardPacket.MODIFIER_CTRL),
+        CTRL_C(KeyEvent.KEYCODE_C, KeyboardPacket.MODIFIER_CTRL),
+        CTRL_X(KeyEvent.KEYCODE_X, KeyboardPacket.MODIFIER_CTRL),
+        CTRL_V(KeyEvent.KEYCODE_V, KeyboardPacket.MODIFIER_CTRL),
+        CTRL_Z(KeyEvent.KEYCODE_Z, KeyboardPacket.MODIFIER_CTRL),
+        CTRL_Y(KeyEvent.KEYCODE_Y, KeyboardPacket.MODIFIER_CTRL),
         TASK_MANAGER(KeyEvent.KEYCODE_ESCAPE,
                 KeyboardPacket.MODIFIER_CTRL | KeyboardPacket.MODIFIER_SHIFT);
 
@@ -56,6 +85,9 @@ public final class PcKeyDispatcher {
         boolean isReady();
 
         byte getBaseModifiers();
+
+        /** Returns whether this exact Android modifier key (including left/right side) is down. */
+        boolean isBaseKeyDown(int androidKeyCode);
 
         short translate(int androidKeyCode);
 
@@ -83,9 +115,11 @@ public final class PcKeyDispatcher {
     }
 
     private final HostKeySender sender;
-    private final List<PressedKey> pressedKeys = new ArrayList<>();
+    private final List<PressedKey> transientPressedKeys = new ArrayList<>();
+    private final List<PressedKey> latchedPressedKeys = new ArrayList<>();
 
-    private int syntheticModifiers;
+    private int transientModifiers;
+    private int latchedModifiers;
     private int activeBaseModifiers;
 
     public PcKeyDispatcher(HostKeySender sender) {
@@ -95,12 +129,7 @@ public final class PcKeyDispatcher {
         this.sender = sender;
     }
 
-    /**
-     * Sends a single key tap. Modifier keys are sent with their modifier bit set on key-down and
-     * cleared on key-up, matching Moonlight's physical-key path.
-     *
-     * @return {@code true} when the complete tap was sent, otherwise {@code false}
-     */
+    /** Sends a single key tap while preserving any toolbar-latched Ctrl or Shift state. */
     public synchronized boolean tapKey(int androidKeyCode) {
         try {
             if (!sender.isReady()) {
@@ -111,8 +140,9 @@ public final class PcKeyDispatcher {
             activeBaseModifiers = normalizeModifiers(sender.getBaseModifiers());
 
             int keyModifier = getModifierMask(androidKeyCode);
-            if (keyModifier != 0 && (activeBaseModifiers & keyModifier) != 0) {
-                // In particular, a standalone Win tap while physical Meta is held is a no-op.
+            if (keyModifier != 0 &&
+                    ((activeBaseModifiers | latchedModifiers) & keyModifier) != 0) {
+                // A standalone modifier tap is a no-op when that modifier is already held.
                 return false;
             }
 
@@ -122,24 +152,20 @@ public final class PcKeyDispatcher {
             }
 
             PressedKey key = new PressedKey(keyMap, keyModifier);
-            press(key);
-            release(key);
+            pressTransient(key);
+            releaseTransient(key);
             return true;
         }
         catch (RuntimeException ignored) {
             return false;
         }
         finally {
-            // This is normally already empty. It also unwinds partial sends after sender failure.
-            releaseAllInternal();
+            // This also unwinds a partially sent tap without touching persistent latches.
+            releaseTransientAllInternal();
         }
     }
 
-    /**
-     * Sends one of the fixed v0.1 shortcuts as an atomic, synchronized chord.
-     *
-     * @return {@code true} when the complete chord was sent, otherwise {@code false}
-     */
+    /** Sends one fixed shortcut as an atomic chord without releasing existing latches. */
     public synchronized boolean dispatchShortcut(PcShortcut shortcut) {
         if (shortcut == null) {
             return false;
@@ -150,11 +176,12 @@ public final class PcKeyDispatcher {
                 return false;
             }
 
-            // Capture BASE exactly once. Modifiers already held by the user are not owned by us.
             activeBaseModifiers = normalizeModifiers(sender.getBaseModifiers());
             int requestedModifiers = shortcut.requestedModifiers & ALL_MODIFIERS;
-            int ownedModifiers = requestedModifiers & ~activeBaseModifiers;
+            int alreadyHeldModifiers = activeBaseModifiers | latchedModifiers;
+            int ownedModifiers = requestedModifiers & ~alreadyHeldModifiers;
 
+            // Translate the complete chord before sending any packet.
             List<PressedKey> modifiers = new ArrayList<>(MODIFIER_KEYS.length);
             for (ModifierKey modifier : MODIFIER_KEYS) {
                 if ((ownedModifiers & modifier.mask) != 0) {
@@ -173,12 +200,12 @@ public final class PcKeyDispatcher {
             PressedKey mainKey = new PressedKey(mainKeyMap, 0);
 
             for (PressedKey modifier : modifiers) {
-                press(modifier);
+                pressTransient(modifier);
             }
-            press(mainKey);
-            release(mainKey);
+            pressTransient(mainKey);
+            releaseTransient(mainKey);
             for (int i = modifiers.size() - 1; i >= 0; i--) {
-                release(modifiers.get(i));
+                releaseTransient(modifiers.get(i));
             }
             return true;
         }
@@ -186,79 +213,249 @@ public final class PcKeyDispatcher {
             return false;
         }
         finally {
-            releaseAllInternal();
+            releaseTransientAllInternal();
         }
     }
 
-    /** Releases any synthetic keys still owned by this dispatcher. Safe to call repeatedly. */
+    /**
+     * Toggles a persistent toolbar-owned modifier.
+     *
+     * <p>If the same physical modifier is already held when enabling, no synthetic ownership is
+     * acquired. If a physical key becomes held after the latch and the user disables the latch,
+     * ownership is transferred locally without sending KEY_UP; the later physical KEY_UP performs
+     * the actual release.</p>
+     */
+    public synchronized boolean toggleModifier(Modifier modifier) {
+        if (modifier == null) {
+            return false;
+        }
+
+        if ((latchedModifiers & modifier.mask) != 0) {
+            return unlatchModifier(modifier);
+        }
+        return latchModifier(modifier);
+    }
+
+    public synchronized boolean isModifierLatched(Modifier modifier) {
+        return modifier != null && (latchedModifiers & modifier.mask) != 0;
+    }
+
+    /** Releases every toolbar-owned key. Safe to call repeatedly and after disconnection. */
     public synchronized void releaseAll() {
-        releaseAllInternal();
-    }
+        releaseTransientAllInternal();
 
-    private void press(PressedKey key) {
-        // Record ownership before sending, because a sender can fail after partially dispatching.
-        pressedKeys.add(key);
-        syntheticModifiers |= key.modifierMask;
-        sender.sendKeyboardInput(key.keyMap, KeyboardPacket.KEY_DOWN,
-                currentModifiers(), NORMALIZED_FLAGS);
-    }
-
-    private void release(PressedKey key) {
-        int lastIndex = pressedKeys.size() - 1;
-        if (lastIndex < 0 || pressedKeys.get(lastIndex) != key) {
-            throw new IllegalStateException("Synthetic keys must be released in reverse order");
-        }
-
-        // Modifier key-up packets carry the state after that modifier has been released.
-        syntheticModifiers &= ~key.modifierMask;
-        sender.sendKeyboardInput(key.keyMap, KeyboardPacket.KEY_UP,
-                currentModifiers(), NORMALIZED_FLAGS);
-        pressedKeys.remove(lastIndex);
-    }
-
-    private void releaseAllInternal() {
-        if (pressedKeys.isEmpty()) {
-            clearLocalState();
+        if (latchedPressedKeys.isEmpty()) {
+            clearLatchedState();
             return;
         }
 
-        boolean ready;
+        boolean ready = safeIsReady();
+        activeBaseModifiers = ready ? safeReadBaseModifiers() : 0;
         try {
-            ready = sender.isReady();
-        }
-        catch (RuntimeException ignored) {
-            ready = false;
-        }
-
-        try {
-            for (int i = pressedKeys.size() - 1; i >= 0; i--) {
-                PressedKey key = pressedKeys.get(i);
-                syntheticModifiers &= ~key.modifierMask;
-
+            for (int i = latchedPressedKeys.size() - 1; i >= 0; i--) {
+                PressedKey key = latchedPressedKeys.get(i);
+                latchedModifiers &= ~key.modifierMask;
                 if (ready) {
                     try {
                         sender.sendKeyboardInput(key.keyMap, KeyboardPacket.KEY_UP,
                                 currentModifiers(), NORMALIZED_FLAGS);
                     }
                     catch (RuntimeException ignored) {
-                        // Continue releasing the remaining keys. Local ownership is always cleared.
+                        // Keep releasing the remaining modifiers. Local state is always cleared.
                     }
                 }
             }
         }
         finally {
-            clearLocalState();
+            clearLatchedState();
+            activeBaseModifiers = 0;
         }
     }
 
-    private void clearLocalState() {
-        pressedKeys.clear();
-        syntheticModifiers = 0;
-        activeBaseModifiers = 0;
+    private boolean latchModifier(Modifier modifier) {
+        try {
+            if (!sender.isReady()) {
+                return false;
+            }
+
+            activeBaseModifiers = normalizeModifiers(sender.getBaseModifiers());
+            if ((activeBaseModifiers & modifier.mask) != 0) {
+                return false;
+            }
+
+            short keyMap = sender.translate(modifier.androidKeyCode);
+            if (keyMap == 0) {
+                return false;
+            }
+
+            PressedKey key = new PressedKey(keyMap, modifier.mask);
+            latchedPressedKeys.add(key);
+            latchedModifiers |= modifier.mask;
+            try {
+                sender.sendKeyboardInput(key.keyMap, KeyboardPacket.KEY_DOWN,
+                        currentModifiers(), NORMALIZED_FLAGS);
+                return true;
+            }
+            catch (RuntimeException ignored) {
+                // The sender may have failed after dispatching. Best-effort a matching KEY_UP.
+                latchedPressedKeys.remove(key);
+                latchedModifiers &= ~modifier.mask;
+                if (safeIsReady()) {
+                    try {
+                        sender.sendKeyboardInput(key.keyMap, KeyboardPacket.KEY_UP,
+                                currentModifiers(), NORMALIZED_FLAGS);
+                    }
+                    catch (RuntimeException ignoredAgain) {
+                        // Local ownership is already gone.
+                    }
+                }
+                return false;
+            }
+        }
+        catch (RuntimeException ignored) {
+            return false;
+        }
+        finally {
+            activeBaseModifiers = 0;
+        }
+    }
+
+    private boolean unlatchModifier(Modifier modifier) {
+        PressedKey key = findLatchedKey(modifier.mask);
+        if (key == null) {
+            latchedModifiers &= ~modifier.mask;
+            return false;
+        }
+
+        boolean ready = safeIsReady();
+        activeBaseModifiers = ready ? safeReadBaseModifiers() : 0;
+
+        try {
+            if (!ready) {
+                // The session is already gone. Clear local ownership without claiming delivery.
+                latchedPressedKeys.remove(key);
+                latchedModifiers &= ~modifier.mask;
+                return false;
+            }
+
+            if (safeIsExactBaseKeyDown(modifier.androidKeyCode)) {
+                // This exact physical key has taken over. Its later KEY_UP performs the release.
+                latchedPressedKeys.remove(key);
+                latchedModifiers &= ~modifier.mask;
+                return true;
+            }
+
+            // Keep local ownership until KEY_UP has been accepted by the sender. If sending throws,
+            // the selected UI remains visible and a later tap or lifecycle cleanup can retry.
+            byte modifiersAfterRelease = (byte) ((activeBaseModifiers |
+                    (latchedModifiers & ~modifier.mask) | transientModifiers) & ALL_MODIFIERS);
+            sender.sendKeyboardInput(key.keyMap, KeyboardPacket.KEY_UP,
+                    modifiersAfterRelease, NORMALIZED_FLAGS);
+            latchedPressedKeys.remove(key);
+            latchedModifiers &= ~modifier.mask;
+            return true;
+        }
+        catch (RuntimeException ignored) {
+            return false;
+        }
+        finally {
+            activeBaseModifiers = 0;
+        }
+    }
+
+    private PressedKey findLatchedKey(int modifierMask) {
+        for (PressedKey key : latchedPressedKeys) {
+            if (key.modifierMask == modifierMask) {
+                return key;
+            }
+        }
+        return null;
+    }
+
+    private void pressTransient(PressedKey key) {
+        // Record ownership before sending, because a sender can fail after partially dispatching.
+        transientPressedKeys.add(key);
+        transientModifiers |= key.modifierMask;
+        sender.sendKeyboardInput(key.keyMap, KeyboardPacket.KEY_DOWN,
+                currentModifiers(), NORMALIZED_FLAGS);
+    }
+
+    private void releaseTransient(PressedKey key) {
+        int lastIndex = transientPressedKeys.size() - 1;
+        if (lastIndex < 0 || transientPressedKeys.get(lastIndex) != key) {
+            throw new IllegalStateException("Transient keys must be released in reverse order");
+        }
+
+        transientModifiers &= ~key.modifierMask;
+        sender.sendKeyboardInput(key.keyMap, KeyboardPacket.KEY_UP,
+                currentModifiers(), NORMALIZED_FLAGS);
+        transientPressedKeys.remove(lastIndex);
+    }
+
+    private void releaseTransientAllInternal() {
+        if (transientPressedKeys.isEmpty()) {
+            transientModifiers = 0;
+            activeBaseModifiers = 0;
+            return;
+        }
+
+        boolean ready = safeIsReady();
+        try {
+            for (int i = transientPressedKeys.size() - 1; i >= 0; i--) {
+                PressedKey key = transientPressedKeys.get(i);
+                transientModifiers &= ~key.modifierMask;
+                if (ready) {
+                    try {
+                        sender.sendKeyboardInput(key.keyMap, KeyboardPacket.KEY_UP,
+                                currentModifiers(), NORMALIZED_FLAGS);
+                    }
+                    catch (RuntimeException ignored) {
+                        // Continue unwinding. Local ownership is always cleared below.
+                    }
+                }
+            }
+        }
+        finally {
+            transientPressedKeys.clear();
+            transientModifiers = 0;
+            activeBaseModifiers = 0;
+        }
+    }
+
+    private void clearLatchedState() {
+        latchedPressedKeys.clear();
+        latchedModifiers = 0;
+    }
+
+    private boolean safeIsReady() {
+        try {
+            return sender.isReady();
+        }
+        catch (RuntimeException ignored) {
+            return false;
+        }
+    }
+
+    private int safeReadBaseModifiers() {
+        try {
+            return normalizeModifiers(sender.getBaseModifiers());
+        }
+        catch (RuntimeException ignored) {
+            return 0;
+        }
+    }
+
+    private boolean safeIsExactBaseKeyDown(int androidKeyCode) {
+        try {
+            return sender.isBaseKeyDown(androidKeyCode);
+        }
+        catch (RuntimeException ignored) {
+            return false;
+        }
     }
 
     private byte currentModifiers() {
-        return (byte) ((activeBaseModifiers | syntheticModifiers) & ALL_MODIFIERS);
+        return (byte) ((activeBaseModifiers | latchedModifiers | transientModifiers) & ALL_MODIFIERS);
     }
 
     private static int normalizeModifiers(byte modifiers) {
