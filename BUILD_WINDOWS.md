@@ -54,9 +54,35 @@ keyPassword=<secret>
 .\gradlew.bat :app:lintNonRootDebug
 .\gradlew.bat :app:assembleNonRootDebug
 .\gradlew.bat :app:assembleNonRootRelease
+.\gradlew.bat :app:assembleRootDebug
 ```
 
-## 本次建置收據
+## v0.2 輸入與介面變更
+
+- Ctrl 與 Shift 改為可點按切換的鎖定修飾鍵；啟用狀態會在工具列上顯示，生命週期清理時會釋放 KATO 擁有的 synthetic key state。
+- Caps 以單次 Caps Lock 按鍵事件切換 Windows 英文大小寫狀態。
+- 快捷鍵依「Windows、視窗、編輯、系統」分組，避免主工具列過長。
+- 「Windows」分組加入 Windows 放大鏡的放大、縮小與關閉快捷鍵。
+- `PcKeyDispatcherTest` 現有 24 項測試，最新報告為 24 tests／0 failures／0 errors／0 skipped。
+
+Moonlight Android 目前沒有 client 端 pinch-to-zoom。即使關閉觸控板模式，第二根手指仍由既有輸入路徑轉為滑鼠滾輪；原生多點觸控轉送程式碼目前被註解。v0.2 未改動串流 Surface、座標映射或 native input，Windows 放大鏡快捷鍵是本版的安全替代方案。
+
+## v0.2 產物狀態
+
+| 項目 | 目前狀態 |
+|---|---|
+| Debug 身分 | `tw.kato.moonlight.debug`／`12.1-kato.0.2-dev`／versionCode `314002` |
+| Release 身分 | `tw.kato.moonlight.unofficial`／`12.1-kato.0.2`／versionCode `314002` |
+| Unit test | PASS，24 tests／0 failures／0 errors／0 skipped |
+| Lint | PASS，0 errors／187 warnings |
+| Debug／Release／Root Debug | 三者皆建置 PASS；Root versionName 維持 `12.1` |
+| Release 目標檔名 | `dist\Moonlight-KATO-12.1-kato.0.2.apk` |
+| Release APK 大小 | 7,990,614 bytes |
+| Release SHA-256 | `0825436FF0E54DEDD763779F7EA923ED90EE3E2A1B8D2A50FD1FB09E9AB0A556` |
+| Release 簽章 readback | v1／v2 PASS；憑證 SHA-256 `d39be840d3ca9501310b561becf21f4f0459ebb617fc93915e1656f1410ca85f`；RSA 3072-bit |
+| Fold 安裝與實機驗收 | 尚未安裝／尚未驗收，不標示 PASS |
+
+## v0.1 歷史建置收據
 
 執行日期：2026-08-15（Asia/Taipei）
 
@@ -82,7 +108,7 @@ winget 的 machine 安裝流程曾被 Windows UAC 安全桌面阻擋，無法由
 
 Gradle 會提示 `ndk.dir` 已 deprecated，以及新版 SDK metadata XML 與 AGP 8.5.1 的相容性警告；兩者均未使任何指定工作失敗。
 
-## Release APK readback
+## v0.1 Release APK 歷史 readback
 
 - 檔案：`dist\Moonlight-KATO-12.1-kato.0.1.apk`
 - 大小：7,975,189 bytes
@@ -101,4 +127,4 @@ Debug 靜態 readback：package `tw.kato.moonlight.debug`、label `Moonlight KAT
 
 Root Debug 相容性 readback：package `com.limelight.root.debug`、label `Moonlight (Root Debug)`、versionName `12.1`、versionCode `314`。KATO 工具列 listener、顯示條件及偏好項目均在 root flavor 停用。
 
-實際安裝後的 `adb shell dumpsys package` readback 需在 Fold 完成 RSA 授權後補做。
+上述大小、雜湊與 readback 全部屬於 v0.1，不得視為 v0.2 產物資訊。v0.1 已由使用者完成實際使用測試並確認核心功能正常；v0.2 仍須另行安裝與驗收。
