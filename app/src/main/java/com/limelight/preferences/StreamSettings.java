@@ -27,6 +27,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowInsets;
 
+import com.limelight.BuildConfig;
 import com.limelight.LimeLog;
 import com.limelight.PcView;
 import com.limelight.R;
@@ -276,6 +277,18 @@ public class StreamSettings extends Activity {
 
             addPreferencesFromResource(R.xml.preferences);
             PreferenceScreen screen = getPreferenceScreen();
+
+            // KATO is intentionally limited to the non-root flavor. Keep the
+            // upstream root flavor's settings surface unchanged.
+            if (BuildConfig.ROOT_BUILD) {
+                PreferenceCategory inputCategory =
+                        (PreferenceCategory) findPreference("category_input_settings");
+                Preference pcKeyToolbarPreference =
+                        findPreference(PreferenceConfiguration.PC_KEY_TOOLBAR_PREF_STRING);
+                if (inputCategory != null && pcKeyToolbarPreference != null) {
+                    inputCategory.removePreference(pcKeyToolbarPreference);
+                }
+            }
 
             // hide on-screen controls category on non touch screen devices
             if (!getActivity().getPackageManager().hasSystemFeature(PackageManager.FEATURE_TOUCHSCREEN)) {

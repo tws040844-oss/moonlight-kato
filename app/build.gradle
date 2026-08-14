@@ -1,5 +1,11 @@
 apply plugin: 'com.android.application'
 
+def katoSigningPropertiesFile = new File(System.getProperty("user.home"), ".android/moonlight-kato-signing.properties")
+def katoSigningProperties = new Properties()
+if (katoSigningPropertiesFile.exists()) {
+    katoSigningPropertiesFile.withInputStream { katoSigningProperties.load(it) }
+}
+
 android {
     ndkVersion "27.0.12077973"
 
@@ -48,7 +54,9 @@ android {
                 }
             }
 
-            applicationId "com.limelight"
+            applicationId "tw.kato.moonlight"
+            versionNameSuffix "-kato.0.1"
+            versionCode 314001
             dimension "root"
             buildConfigField "boolean", "ROOT_BUILD", "false"
         }
@@ -79,10 +87,26 @@ android {
         }
     }
 
+    signingConfigs {
+        katoRelease {
+            if (katoSigningPropertiesFile.exists()) {
+                storeFile file(katoSigningProperties['storeFile'])
+                storePassword katoSigningProperties['storePassword']
+                keyAlias katoSigningProperties['keyAlias']
+                keyPassword katoSigningProperties['keyPassword']
+            }
+        }
+    }
+
+    // Keep the custom release key scoped to the non-root KATO flavor.
+    if (katoSigningPropertiesFile.exists()) {
+        productFlavors.nonRoot.signingConfig = signingConfigs.katoRelease
+    }
+
     buildTypes {
         debug {
             applicationIdSuffix ".debug"
-            resValue "string", "app_label", "Moonlight (Debug)"
+            resValue "string", "app_label", "Moonlight KATO Dev"
             resValue "string", "app_label_root", "Moonlight (Root Debug)"
 
             minifyEnabled true
@@ -120,11 +144,20 @@ android {
             //
             // TL;DR: Leave the following line alone!
             applicationIdSuffix ".unofficial"
-            resValue "string", "app_label", "Moonlight"
+            resValue "string", "app_label", "Moonlight KATO"
             resValue "string", "app_label_root", "Moonlight (Root)"
 
             minifyEnabled true
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        }
+    }
+
+    // Keep the -dev suffix specific to nonRootDebug so the root flavor stays untouched.
+    applicationVariants.configureEach { variant ->
+        if (variant.flavorName == "nonRoot" && variant.buildType.name == "debug") {
+            variant.outputs.configureEach { output ->
+                output.versionNameOverride = "12.1-kato.0.1-dev"
+            }
         }
     }
 
@@ -142,4 +175,5 @@ dependencies {
     implementation 'com.squareup.okhttp3:okhttp:4.12.0'
     implementation 'org.jmdns:jmdns:3.5.9'
     implementation 'com.github.cgutman:ShieldControllerExtensions:1.0.1'
+    testImplementation 'junit:junit:4.13.2'
 }

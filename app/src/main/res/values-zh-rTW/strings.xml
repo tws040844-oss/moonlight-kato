@@ -276,4 +276,40 @@
     <string name="summary_checkbox_gamepad_motion_fallback">如果您連線的手把或 Android 版本不支援手把感測器，請使用裝置內建的動態感測器。
 \n注意：啟用此選項可能會導致您的手把在主機被辨識為 PlayStation 控制器。</string>
     <string name="title_checkbox_gamepad_motion_fallback">模擬手把動態感測器支援</string>
+    <string name="title_checkbox_pc_key_toolbar">PC 特殊鍵工具列</string>
+    <string name="summary_checkbox_pc_key_toolbar">串流時顯示可拖曳的 Windows 特殊鍵與快捷鍵工具列</string>
+
+    <!-- Moonlight KATO PC 特殊鍵工具列 -->
+    <string name="pc_key_toolbar_pc">PC</string>
+    <string name="pc_key_toolbar_pc_description">開啟 PC 特殊鍵工具列</string>
+    <string name="pc_key_toolbar_keyboard">鍵盤</string>
+    <string name="pc_key_toolbar_keyboard_description">切換螢幕鍵盤</string>
+    <string name="pc_key_toolbar_win">Win</string>
+    <string name="pc_key_toolbar_win_description">Windows 鍵</string>
+    <string name="pc_key_toolbar_escape">Esc</string>
+    <string name="pc_key_toolbar_escape_description">Esc 鍵</string>
+    <string name="pc_key_toolbar_tab">Tab</string>
+    <string name="pc_key_toolbar_tab_description">Tab 鍵</string>
+    <string name="pc_key_toolbar_left">←</string>
+    <string name="pc_key_toolbar_left_description">向左鍵</string>
+    <string name="pc_key_toolbar_up">↑</string>
+    <string name="pc_key_toolbar_up_description">向上鍵</string>
+    <string name="pc_key_toolbar_down">↓</string>
+    <string name="pc_key_toolbar_down_description">向下鍵</string>
+    <string name="pc_key_toolbar_right">→</string>
+    <string name="pc_key_toolbar_right_description">向右鍵</string>
+    <string name="pc_key_toolbar_shortcuts">快捷鍵</string>
+    <string name="pc_key_toolbar_shortcuts_description">顯示 PC 快捷鍵</string>
+    <string name="pc_key_toolbar_collapse">×</string>
+    <string name="pc_key_toolbar_collapse_description">收合 PC 特殊鍵工具列</string>
+    <string name="pc_key_toolbar_shortcut_win_e">Win+E</string>
+    <string name="pc_key_toolbar_shortcut_win_e_description">開啟檔案總管</string>
+    <string name="pc_key_toolbar_shortcut_win_r">Win+R</string>
+    <string name="pc_key_toolbar_shortcut_win_r_description">開啟執行視窗</string>
+    <string name="pc_key_toolbar_shortcut_previous_window">上一個視窗</string>
+    <string name="pc_key_toolbar_shortcut_previous_window_description">切換至上一個視窗</string>
+    <string name="pc_key_toolbar_shortcut_task_manager">工作管理員</string>
+    <string name="pc_key_toolbar_shortcut_task_manager_description">開啟工作管理員</string>
+    <string name="pc_key_toolbar_hide_session">本次串流隱藏</string>
+    <string name="pc_key_toolbar_hide_session_description">本次串流期間隱藏工具列</string>
 </resources>

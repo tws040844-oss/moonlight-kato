@@ -130,6 +130,11 @@
     <PreferenceCategory android:title="@string/category_input_settings"
         android:key="category_input_settings">
         <CheckBoxPreference
+            android:key="checkbox_pc_key_toolbar"
+            android:title="@string/title_checkbox_pc_key_toolbar"
+            android:summary="@string/summary_checkbox_pc_key_toolbar"
+            android:defaultValue="true" />
+        <CheckBoxPreference
             android:key="checkbox_touchscreen_trackpad"
             android:title="@string/title_checkbox_touchscreen_trackpad"
             android:summary="@string/summary_checkbox_touchscreen_trackpad"

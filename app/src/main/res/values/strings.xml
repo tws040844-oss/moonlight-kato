@@ -300,4 +300,41 @@
     <string name="analogscroll_none">None (both sticks move the mouse)</string>
     <string name="analogscroll_right">Right analog stick</string>
     <string name="analogscroll_left">Left analog stick</string>
+
+    <string name="title_checkbox_pc_key_toolbar">PC special key toolbar</string>
+    <string name="summary_checkbox_pc_key_toolbar">Show a movable toolbar for Windows keys and shortcuts while streaming</string>
+
+    <!-- Moonlight KATO PC key toolbar -->
+    <string name="pc_key_toolbar_pc">PC</string>
+    <string name="pc_key_toolbar_pc_description">Open PC key toolbar</string>
+    <string name="pc_key_toolbar_keyboard">Keyboard</string>
+    <string name="pc_key_toolbar_keyboard_description">Toggle software keyboard</string>
+    <string name="pc_key_toolbar_win">Win</string>
+    <string name="pc_key_toolbar_win_description">Windows key</string>
+    <string name="pc_key_toolbar_escape">Esc</string>
+    <string name="pc_key_toolbar_escape_description">Escape key</string>
+    <string name="pc_key_toolbar_tab">Tab</string>
+    <string name="pc_key_toolbar_tab_description">Tab key</string>
+    <string name="pc_key_toolbar_left">←</string>
+    <string name="pc_key_toolbar_left_description">Left arrow key</string>
+    <string name="pc_key_toolbar_up">↑</string>
+    <string name="pc_key_toolbar_up_description">Up arrow key</string>
+    <string name="pc_key_toolbar_down">↓</string>
+    <string name="pc_key_toolbar_down_description">Down arrow key</string>
+    <string name="pc_key_toolbar_right">→</string>
+    <string name="pc_key_toolbar_right_description">Right arrow key</string>
+    <string name="pc_key_toolbar_shortcuts">Shortcuts</string>
+    <string name="pc_key_toolbar_shortcuts_description">Show PC shortcuts</string>
+    <string name="pc_key_toolbar_collapse">×</string>
+    <string name="pc_key_toolbar_collapse_description">Collapse PC key toolbar</string>
+    <string name="pc_key_toolbar_shortcut_win_e">Win+E</string>
+    <string name="pc_key_toolbar_shortcut_win_e_description">Open File Explorer</string>
+    <string name="pc_key_toolbar_shortcut_win_r">Win+R</string>
+    <string name="pc_key_toolbar_shortcut_win_r_description">Open Run dialog</string>
+    <string name="pc_key_toolbar_shortcut_previous_window">Previous window</string>
+    <string name="pc_key_toolbar_shortcut_previous_window_description">Switch to previous window</string>
+    <string name="pc_key_toolbar_shortcut_task_manager">Task Manager</string>
+    <string name="pc_key_toolbar_shortcut_task_manager_description">Open Task Manager</string>
+    <string name="pc_key_toolbar_hide_session">Hide this session</string>
+    <string name="pc_key_toolbar_hide_session_description">Hide toolbar for this stream</string>
 </resources>

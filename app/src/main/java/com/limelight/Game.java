@@ -5,6 +5,7 @@ import com.limelight.binding.PlatformBinding;
 import com.limelight.binding.audio.AndroidAudioRenderer;
 import com.limelight.binding.input.ControllerHandler;
 import com.limelight.binding.input.KeyboardTranslator;
+import com.limelight.binding.input.PcKeyDispatcher;
 import com.limelight.binding.input.capture.InputCaptureManager;
 import com.limelight.binding.input.capture.InputCaptureProvider;
 import com.limelight.binding.input.touch.AbsoluteTouchContext;
@@ -30,6 +31,7 @@ import com.limelight.nvstream.jni.MoonBridge;
 import com.limelight.preferences.GlPreferences;
 import com.limelight.preferences.PreferenceConfiguration;
 import com.limelight.ui.GameGestures;
+import com.limelight.ui.PcKeyToolbarView;
 import com.limelight.ui.StreamView;
 import com.limelight.utils.Dialog;
 import com.limelight.utils.ServerHelper;
@@ -111,6 +113,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
 
     private ControllerHandler controllerHandler;
     private KeyboardTranslator keyboardTranslator;
+    private PcKeyDispatcher pcKeyDispatcher;
     private VirtualController virtualController;
 
     private PreferenceConfiguration prefConfig;
@@ -121,6 +124,11 @@ public class Game extends Activity implements SurfaceHolder.Callback,
     private boolean displayedFailureDialog = false;
     private boolean connecting = false;
     private boolean connected = false;
+    private boolean stopping = false;
+    private boolean destroyed = false;
+    private volatile boolean inputChannelHealthy = false;
+    private volatile boolean connectionTerminationObserved = false;
+    private final Object connectionStateLock = new Object();
     private boolean autoEnterPip = false;
     private boolean surfaceCreated = false;
     private boolean attemptedConnection = false;
@@ -137,6 +145,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
     private boolean waitingForAllModifiersUp = false;
     private int specialKeyCode = KeyEvent.KEYCODE_UNKNOWN;
     private StreamView streamView;
+    private PcKeyToolbarView pcKeyToolbarView;
     private long lastAbsTouchUpTime = 0;
     private long lastAbsTouchDownTime = 0;
     private float lastAbsTouchUpX, lastAbsTouchUpY;
@@ -271,6 +280,43 @@ public class Game extends Activity implements SurfaceHolder.Callback,
         notificationOverlayView = findViewById(R.id.notificationOverlay);
 
         performanceOverlayView = findViewById(R.id.performanceOverlay);
+
+        pcKeyToolbarView = findViewById(R.id.pcKeyToolbar);
+        pcKeyToolbarView.setHostVisible(false);
+        if (!BuildConfig.ROOT_BUILD) {
+            pcKeyToolbarView.setListener(new PcKeyToolbarView.Listener() {
+                @Override
+                public void onToggleKeyboardRequested() {
+                    toggleKeyboard();
+                }
+
+                @Override
+                public void onKeyRequested(int androidKeyCode) {
+                    if (pcKeyDispatcher != null) {
+                        pcKeyDispatcher.tapKey(androidKeyCode);
+                    }
+                }
+
+                @Override
+                public void onShortcutRequested(PcKeyDispatcher.PcShortcut shortcut) {
+                    if (pcKeyDispatcher != null) {
+                        pcKeyDispatcher.dispatchShortcut(shortcut);
+                    }
+                }
+
+                @Override
+                public void onSessionHideRequested() {
+                    pcKeyToolbarView.hideForSession();
+                }
+
+                @Override
+                public void onInputCancelled() {
+                    if (pcKeyDispatcher != null) {
+                        pcKeyDispatcher.releaseAll();
+                    }
+                }
+            });
+        }
 
         inputCaptureProvider = InputCaptureManager.getInputCaptureProvider(this, this);
 
@@ -488,6 +534,28 @@ public class Game extends Activity implements SurfaceHolder.Callback,
                 PlatformBinding.getCryptoProvider(this), serverCert);
         controllerHandler = new ControllerHandler(this, conn, this, prefConfig);
         keyboardTranslator = new KeyboardTranslator();
+        pcKeyDispatcher = new PcKeyDispatcher(new PcKeyDispatcher.HostKeySender() {
+            @Override
+            public boolean isReady() {
+                return connected && inputChannelHealthy && !connectionTerminationObserved &&
+                        !stopping && conn != null;
+            }
+
+            @Override
+            public byte getBaseModifiers() {
+                return getModifierState();
+            }
+
+            @Override
+            public short translate(int androidKeyCode) {
+                return keyboardTranslator.translate(androidKeyCode, -1);
+            }
+
+            @Override
+            public void sendKeyboardInput(short keyMap, byte keyDirection, byte modifiers, byte flags) {
+                conn.sendKeyboardInput(keyMap, keyDirection, modifiers, flags);
+            }
+        });
 
         InputManager inputManager = (InputManager) getSystemService(Context.INPUT_SERVICE);
         inputManager.registerInputDeviceListener(keyboardTranslator, null);
@@ -511,6 +579,10 @@ public class Game extends Activity implements SurfaceHolder.Callback,
                     this);
             virtualController.refreshLayout();
             virtualController.show();
+        }
+
+        if (!BuildConfig.ROOT_BUILD) {
+            pcKeyToolbarView.ensureOnTop();
         }
 
         if (prefConfig.usbDriver) {
@@ -626,6 +698,13 @@ public class Game extends Activity implements SurfaceHolder.Callback,
                 UiHelper.notifyStreamExitingPiP(this);
             }
         }
+
+        releaseAllKeyboardState();
+        if (pcKeyToolbarView != null) {
+            pcKeyToolbarView.collapse();
+            pcKeyToolbarView.reposition();
+            updatePcKeyToolbarVisibility();
+        }
     }
 
     @TargetApi(Build.VERSION_CODES.O)
@@ -732,12 +811,33 @@ public class Game extends Activity implements SurfaceHolder.Callback,
     }
 
     @Override
+    @TargetApi(Build.VERSION_CODES.O)
+    public void onPictureInPictureModeChanged(boolean isInPictureInPictureMode,
+                                              Configuration newConfig) {
+        super.onPictureInPictureModeChanged(isInPictureInPictureMode, newConfig);
+
+        isHidingOverlays = isInPictureInPictureMode;
+        if (isInPictureInPictureMode) {
+            releaseAllKeyboardState();
+            if (pcKeyToolbarView != null) {
+                pcKeyToolbarView.collapse();
+                pcKeyToolbarView.setHostVisible(false);
+            }
+        }
+        else if (pcKeyToolbarView != null) {
+            pcKeyToolbarView.collapse();
+            pcKeyToolbarView.reposition();
+            updatePcKeyToolbarVisibility();
+        }
+    }
+
+    @Override
     public void onWindowFocusChanged(boolean hasFocus) {
         super.onWindowFocusChanged(hasFocus);
 
-        // We can't guarantee the state of modifiers keys which may have
-        // lifted while focus was not on us. Clear the modifier state.
-        this.modifierFlags = 0;
+        if (!hasFocus) {
+            releaseAllKeyboardState();
+        }
 
         // With Android native pointer capture, capture is lost when focus is lost,
         // so it must be requested again when focus is regained.
@@ -1027,6 +1127,12 @@ public class Game extends Activity implements SurfaceHolder.Callback,
 
     @Override
     protected void onDestroy() {
+        destroyed = true;
+        releaseAllKeyboardState();
+        if (pcKeyToolbarView != null) {
+            pcKeyToolbarView.setHostVisible(false);
+        }
+
         super.onDestroy();
 
         if (controllerHandler != null) {
@@ -1055,6 +1161,11 @@ public class Game extends Activity implements SurfaceHolder.Callback,
 
     @Override
     protected void onPause() {
+        releaseAllKeyboardState();
+        if (pcKeyToolbarView != null) {
+            pcKeyToolbarView.setHostVisible(false);
+        }
+
         if (isFinishing()) {
             // Stop any further input device notifications before we lose focus (and pointer capture)
             if (controllerHandler != null) {
@@ -1066,6 +1177,12 @@ public class Game extends Activity implements SurfaceHolder.Callback,
         }
 
         super.onPause();
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        updatePcKeyToolbarVisibility();
     }
 
     @Override
@@ -1141,6 +1258,10 @@ public class Game extends Activity implements SurfaceHolder.Callback,
     }
 
     private void setInputGrabState(boolean grab) {
+        if (!grab && grabbedInput) {
+            releaseAllKeyboardState();
+        }
+
         // Grab/ungrab the mouse cursor
         if (grab) {
             inputCaptureProvider.enableCapture();
@@ -1298,6 +1419,19 @@ public class Game extends Activity implements SurfaceHolder.Callback,
 
     private byte getModifierState() {
         return (byte) modifierFlags;
+    }
+
+    /**
+     * Releases toolbar-owned synthetic keys, then clears the local modifier state. If the
+     * connection is already dead, PcKeyDispatcher.releaseAll() only clears local ownership.
+     */
+    private void releaseAllKeyboardState() {
+        if (pcKeyDispatcher != null) {
+            pcKeyDispatcher.releaseAll();
+        }
+        modifierFlags = 0;
+        waitingForAllModifiersUp = false;
+        specialKeyCode = KeyEvent.KEYCODE_UNKNOWN;
     }
 
     @Override
@@ -2207,11 +2341,30 @@ public class Game extends Activity implements SurfaceHolder.Callback,
     }
 
     private void stopConnection() {
+        stopConnection(true);
+    }
+
+    private void stopConnection(boolean requestRemoteRelease) {
         if (connecting || connected) {
+            // A graceful local stop can still deliver cleanup packets. A termination callback
+            // means the input channel is already gone, so releaseAll() only clears local state.
+            if (!requestRemoteRelease) {
+                this.inputChannelHealthy = false;
+            }
+            releaseAllKeyboardState();
+            stopping = true;
+            if (pcKeyToolbarView != null) {
+                pcKeyToolbarView.setHostVisible(false);
+                pcKeyToolbarView.collapse();
+            }
+
             connecting = connected = false;
+            this.inputChannelHealthy = false;
             updatePipAutoEnter();
 
-            controllerHandler.stop();
+            if (controllerHandler != null) {
+                controllerHandler.stop();
+            }
 
             // Update GameManager state to indicate we're no longer in game
             UiHelper.notifyStreamEnded(this);
@@ -2221,9 +2374,12 @@ public class Game extends Activity implements SurfaceHolder.Callback,
             // thread to keep things smooth for the UI. Inside moonlight-common,
             // we prevent another thread from starting a connection before and
             // during the process of stopping this one.
+            final NvConnection connectionToStop = conn;
             new Thread() {
                 public void run() {
-                    conn.stop();
+                    if (connectionToStop != null) {
+                        connectionToStop.stop();
+                    }
                 }
             }.start();
         }
@@ -2271,6 +2427,18 @@ public class Game extends Activity implements SurfaceHolder.Callback,
 
     @Override
     public void connectionTerminated(final int errorCode) {
+        // Invalidate input readiness immediately, before the diagnostic network test below.
+        synchronized (connectionStateLock) {
+            connectionTerminationObserved = true;
+            inputChannelHealthy = false;
+        }
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                stopConnection(false);
+            }
+        });
+
         // Perform a connection test if the failure could be due to a blocked port
         // This does network I/O, so don't do it on the main thread.
         final int portFlags = MoonBridge.getPortFlagsFromTerminationErrorCode(errorCode);
@@ -2291,8 +2459,6 @@ public class Game extends Activity implements SurfaceHolder.Callback,
                 if (!displayedFailureDialog) {
                     displayedFailureDialog = true;
                     LimeLog.severe("Connection terminated: " + errorCode);
-                    stopConnection();
-
                     // Display the error dialog if it was an unexpected termination.
                     // Otherwise, just finish the activity immediately.
                     if (errorCode != MoonBridge.ML_ERROR_GRACEFUL_TERMINATION) {
@@ -2387,14 +2553,30 @@ public class Game extends Activity implements SurfaceHolder.Callback,
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
+                synchronized (connectionStateLock) {
+                    if (connectionTerminationObserved || stopping || destroyed ||
+                            isFinishing() || isDestroyed()) {
+                        inputChannelHealthy = false;
+                        return;
+                    }
+
+                    connected = true;
+                    connecting = false;
+                    inputChannelHealthy = true;
+                }
+
                 if (spinner != null) {
                     spinner.dismiss();
                     spinner = null;
                 }
 
-                connected = true;
-                connecting = false;
                 updatePipAutoEnter();
+
+                if (pcKeyToolbarView != null) {
+                    pcKeyToolbarView.resetForSession();
+                    pcKeyToolbarView.reposition();
+                    updatePcKeyToolbarVisibility();
+                }
 
                 // Hide the mouse cursor now after a short delay.
                 // Doing it before dismissing the spinner seems to be undone
@@ -2405,7 +2587,10 @@ public class Game extends Activity implements SurfaceHolder.Callback,
                 h.postDelayed(new Runnable() {
                     @Override
                     public void run() {
-                        setInputGrabState(true);
+                        if (connected && inputChannelHealthy && !connectionTerminationObserved &&
+                                !stopping && !destroyed) {
+                            setInputGrabState(true);
+                        }
                     }
                 }, 500);
 
@@ -2491,6 +2676,10 @@ public class Game extends Activity implements SurfaceHolder.Callback,
 
         if (!attemptedConnection) {
             attemptedConnection = true;
+            connecting = true;
+            stopping = false;
+            inputChannelHealthy = false;
+            connectionTerminationObserved = false;
 
             // Update GameManager state to indicate we're "loading" while connecting
             UiHelper.notifyStreamConnecting(Game.this);
@@ -2547,7 +2736,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
             // Let the decoder know immediately that the surface is gone
             decoderRenderer.prepareForStop();
 
-            if (connected) {
+            if (connecting || connected) {
                 stopConnection();
             }
         }
@@ -2617,6 +2806,23 @@ public class Game extends Activity implements SurfaceHolder.Callback,
             else {
                 conn.sendKeyboardInput(keyMap, KeyboardPacket.KEY_UP, getModifierState(), (byte)0);
             }
+        }
+    }
+
+    private void updatePcKeyToolbarVisibility() {
+        if (pcKeyToolbarView == null || prefConfig == null) {
+            return;
+        }
+
+        boolean show = !BuildConfig.ROOT_BUILD && connected && inputChannelHealthy && !connectionTerminationObserved &&
+                !stopping && prefConfig.pcKeyToolbarEnabled && !isHidingOverlays;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && isInPictureInPictureMode()) {
+            show = false;
+        }
+
+        pcKeyToolbarView.setHostVisible(show);
+        if (show) {
+            pcKeyToolbarView.ensureOnTop();
         }
     }
 
