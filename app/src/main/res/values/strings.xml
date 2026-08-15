@@ -147,6 +147,22 @@
     <string name="category_basic_settings">Basic Settings</string>
     <string name="title_resolution_list">Video resolution</string>
     <string name="summary_resolution_list">Increase to improve image clarity. Decrease for better performance on lower end devices and slower networks.</string>
+    <string name="title_custom_resolution">Custom resolution</string>
+    <string name="summary_custom_resolution">Enter a custom width and height. The change takes effect after reconnecting the stream.</string>
+    <string name="custom_resolution_entry">Custom (%1$d × %2$d)</string>
+    <string name="custom_resolution_current">Current resolution: %1$d × %2$d</string>
+    <string name="custom_resolution_instructions">Your host display or VDD must support the same resolution. Stop and reconnect the stream after saving.</string>
+    <string name="custom_resolution_width">Width (pixels)</string>
+    <string name="custom_resolution_height">Height (pixels)</string>
+    <string name="custom_resolution_dimension_value" translatable="false">%1$d</string>
+    <string name="custom_resolution_save">Save</string>
+    <string name="custom_resolution_cancel">Cancel</string>
+    <string name="custom_resolution_error_empty">Enter both the width and height.</string>
+    <string name="custom_resolution_error_format">Enter whole numbers only.</string>
+    <string name="custom_resolution_error_out_of_range">Each dimension must be between 256 and 8192 pixels.</string>
+    <string name="custom_resolution_error_odd_dimension">The width and height must both be even numbers.</string>
+    <string name="custom_resolution_error_too_many_pixels">The total resolution must not exceed 7680 × 4320 pixels.</string>
+    <string name="custom_resolution_saved">Custom resolution set to %1$d × %2$d. Reconnect the stream to apply it.</string>
     <string name="title_native_res_dialog">Native Resolution Warning</string>
     <string name="text_native_res_dialog">Native resolution and/or FPS may not be supported by the streaming server. You will probably need to configure a matching custom display mode for the host PC manually.\n\nIf you choose to create a custom resolution in NVIDIA Control Panel to match your screen settings, please ensure you have read and understood NVIDIA\'s warning regarding possible monitor damage, PC instability, and other potential problems.\n\nWe are not responsible for any problems resulting from creating a custom resolution on your PC.\n\nIt may be that your monitor does not support a necessary display configuration. If so, you may try to set up a virtual monitor. Finally, if your device or host PC does not support streaming at a specific resolution or refresh rate, you\'re out of luck unfortunately.</string>
     <string name="title_fps_list">Video frame rate</string>

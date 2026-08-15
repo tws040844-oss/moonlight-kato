@@ -9,6 +9,7 @@ import android.media.MediaCodecInfo;
 import android.os.Build;
 import android.os.Bundle;
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.os.Handler;
 import android.os.Vibrator;
 import android.preference.CheckBoxPreference;
@@ -26,6 +27,10 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowInsets;
+import android.widget.Button;
+import android.widget.EditText;
+import android.widget.TextView;
+import android.widget.Toast;
 
 import com.limelight.BuildConfig;
 import com.limelight.LimeLog;
@@ -123,6 +128,8 @@ public class StreamSettings extends Activity {
     }
 
     public static class SettingsFragment extends PreferenceFragment {
+        private static final String CUSTOM_RESOLUTION_EDITOR_PREF_STRING = "preference_custom_resolution";
+
         private int nativeResolutionStartIndex = Integer.MAX_VALUE;
         private boolean nativeFramerateShown = false;
 
@@ -142,6 +149,177 @@ public class StreamSettings extends Activity {
 
             pref.setEntries(newEntries);
             pref.setEntryValues(newValues);
+        }
+
+        private void addSavedCustomResolutionEntry(SharedPreferences prefs) {
+            if (BuildConfig.ROOT_BUILD) {
+                return;
+            }
+
+            String selectedValue = prefs.getString(
+                    PreferenceConfiguration.RESOLUTION_PREF_STRING,
+                    PreferenceConfiguration.DEFAULT_RESOLUTION);
+            String savedRawValue = prefs.getString(
+                    PreferenceConfiguration.CUSTOM_RESOLUTION_PREF_STRING, null);
+
+            CustomResolution.ValidationResult selectedCustom =
+                    CustomResolution.parseEncoded(selectedValue);
+            CustomResolution.ValidationResult savedCustom =
+                    CustomResolution.parseRaw(savedRawValue);
+
+            // The selected encoded value is authoritative. Repair the auxiliary raw value if an
+            // interrupted or older write left the two preferences out of sync.
+            if (selectedCustom.isValid() &&
+                    (!savedCustom.isValid() ||
+                            !selectedCustom.rawValue().equals(savedCustom.rawValue()))) {
+                prefs.edit()
+                        .putString(PreferenceConfiguration.CUSTOM_RESOLUTION_PREF_STRING,
+                                selectedCustom.rawValue())
+                        .apply();
+                savedCustom = selectedCustom;
+            }
+
+            if (!savedCustom.isValid()) {
+                return;
+            }
+
+            ListPreference resolutionPreference = (ListPreference) findPreference(
+                    PreferenceConfiguration.RESOLUTION_PREF_STRING);
+            appendPreferenceEntry(
+                    resolutionPreference,
+                    getString(R.string.custom_resolution_entry,
+                            savedCustom.width, savedCustom.height),
+                    savedCustom.encodedValue());
+        }
+
+        private int getCustomResolutionErrorString(CustomResolution.ValidationError error) {
+            switch (error) {
+                case EMPTY:
+                    return R.string.custom_resolution_error_empty;
+                case FORMAT:
+                    return R.string.custom_resolution_error_format;
+                case OUT_OF_RANGE:
+                    return R.string.custom_resolution_error_out_of_range;
+                case ODD_DIMENSION:
+                    return R.string.custom_resolution_error_odd_dimension;
+                case TOO_MANY_PIXELS:
+                    return R.string.custom_resolution_error_too_many_pixels;
+                case NONE:
+                default:
+                    return R.string.custom_resolution_error_format;
+            }
+        }
+
+        private CustomResolution.ValidationResult parseSelectedResolution(String selectedValue) {
+            CustomResolution.ValidationResult result = CustomResolution.parseEncoded(selectedValue);
+            if (!result.isValid()) {
+                result = CustomResolution.parseRaw(selectedValue);
+            }
+            if (!result.isValid()) {
+                result = CustomResolution.parseRaw(PreferenceConfiguration.DEFAULT_RESOLUTION);
+            }
+            return result;
+        }
+
+        private void showCustomResolutionDialog() {
+            final Activity activity = getActivity();
+            if (activity == null || activity.isFinishing()) {
+                return;
+            }
+
+            final SharedPreferences prefs =
+                    PreferenceManager.getDefaultSharedPreferences(activity);
+            String selectedValue = prefs.getString(
+                    PreferenceConfiguration.RESOLUTION_PREF_STRING,
+                    PreferenceConfiguration.DEFAULT_RESOLUTION);
+            final CustomResolution.ValidationResult currentResolution =
+                    parseSelectedResolution(selectedValue);
+
+            CustomResolution.ValidationResult savedResolution = CustomResolution.parseRaw(
+                    prefs.getString(PreferenceConfiguration.CUSTOM_RESOLUTION_PREF_STRING, null));
+            if (!savedResolution.isValid()) {
+                savedResolution = currentResolution;
+            }
+
+            View dialogView = activity.getLayoutInflater().inflate(
+                    R.layout.dialog_custom_resolution, null);
+            final TextView currentText = dialogView.findViewById(
+                    R.id.custom_resolution_current);
+            final EditText widthInput = dialogView.findViewById(
+                    R.id.custom_resolution_width);
+            final EditText heightInput = dialogView.findViewById(
+                    R.id.custom_resolution_height);
+            final TextView errorText = dialogView.findViewById(
+                    R.id.custom_resolution_error);
+
+            currentText.setText(activity.getString(R.string.custom_resolution_current,
+                    currentResolution.width, currentResolution.height));
+            widthInput.setText(activity.getString(
+                    R.string.custom_resolution_dimension_value, savedResolution.width));
+            heightInput.setText(activity.getString(
+                    R.string.custom_resolution_dimension_value, savedResolution.height));
+
+            final AlertDialog dialog = new AlertDialog.Builder(activity)
+                    .setTitle(R.string.title_custom_resolution)
+                    .setView(dialogView)
+                    .setNegativeButton(R.string.custom_resolution_cancel, null)
+                    .setPositiveButton(R.string.custom_resolution_save, null)
+                    .create();
+
+            dialog.setOnShowListener(ignored -> {
+                Button saveButton = dialog.getButton(AlertDialog.BUTTON_POSITIVE);
+                saveButton.setOnClickListener(view -> {
+                    String widthText = widthInput.getText().toString().trim();
+                    String heightText = heightInput.getText().toString().trim();
+                    CustomResolution.ValidationResult result =
+                            CustomResolution.validate(widthText, heightText);
+
+                    if (!result.isValid()) {
+                        String errorMessage = activity.getString(
+                                getCustomResolutionErrorString(result.error));
+                        errorText.setText(errorMessage);
+                        errorText.setVisibility(View.VISIBLE);
+
+                        if (widthText.isEmpty()) {
+                            widthInput.requestFocus();
+                        }
+                        else if (heightText.isEmpty()) {
+                            heightInput.requestFocus();
+                        }
+                        else {
+                            widthInput.requestFocus();
+                        }
+                        errorText.announceForAccessibility(errorMessage);
+                        return;
+                    }
+
+                    errorText.setVisibility(View.GONE);
+                    String fps = prefs.getString(
+                            PreferenceConfiguration.FPS_PREF_STRING,
+                            PreferenceConfiguration.DEFAULT_FPS);
+                    int bitrate = PreferenceConfiguration.getDefaultBitrate(
+                            result.rawValue(), fps);
+
+                    // Keep the raw editor value, encoded ListPreference value, and derived bitrate
+                    // atomic from the UI's perspective.
+                    prefs.edit()
+                            .putString(PreferenceConfiguration.CUSTOM_RESOLUTION_PREF_STRING,
+                                    result.rawValue())
+                            .putString(PreferenceConfiguration.RESOLUTION_PREF_STRING,
+                                    result.encodedValue())
+                            .putInt(PreferenceConfiguration.BITRATE_PREF_STRING, bitrate)
+                            .apply();
+
+                    dialog.dismiss();
+                    Toast.makeText(activity,
+                            activity.getString(R.string.custom_resolution_saved,
+                                    result.width, result.height),
+                            Toast.LENGTH_LONG).show();
+                    ((StreamSettings) activity).reloadSettings();
+                });
+            });
+
+            dialog.show();
         }
 
         private void addNativeResolutionEntry(int nativeWidth, int nativeHeight, boolean insetsRemoved, boolean portrait) {
@@ -254,6 +432,11 @@ public class StreamSettings extends Activity {
             if (res == null) {
                 res = prefs.getString(PreferenceConfiguration.RESOLUTION_PREF_STRING, PreferenceConfiguration.DEFAULT_RESOLUTION);
             }
+            CustomResolution.ValidationResult customResolution =
+                    CustomResolution.parseEncoded(res);
+            if (customResolution.isValid()) {
+                res = customResolution.rawValue();
+            }
             if (fps == null) {
                 fps = prefs.getString(PreferenceConfiguration.FPS_PREF_STRING, PreferenceConfiguration.DEFAULT_FPS);
             }
@@ -281,6 +464,14 @@ public class StreamSettings extends Activity {
             // KATO is intentionally limited to the non-root flavor. Keep the
             // upstream root flavor's settings surface unchanged.
             if (BuildConfig.ROOT_BUILD) {
+                PreferenceCategory basicCategory =
+                        (PreferenceCategory) findPreference("category_basic_settings");
+                Preference customResolutionPreference =
+                        findPreference(CUSTOM_RESOLUTION_EDITOR_PREF_STRING);
+                if (basicCategory != null && customResolutionPreference != null) {
+                    basicCategory.removePreference(customResolutionPreference);
+                }
+
                 PreferenceCategory inputCategory =
                         (PreferenceCategory) findPreference("category_input_settings");
                 Preference pcKeyToolbarPreference =
@@ -288,6 +479,21 @@ public class StreamSettings extends Activity {
                 if (inputCategory != null && pcKeyToolbarPreference != null) {
                     inputCategory.removePreference(pcKeyToolbarPreference);
                 }
+            }
+            else {
+                SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(
+                        getActivity());
+
+                // Add the saved custom entry before any detected Native entries so it remains a
+                // normal selectable resolution and is never mistaken for Native.
+                addSavedCustomResolutionEntry(prefs);
+
+                Preference customResolutionPreference =
+                        findPreference(CUSTOM_RESOLUTION_EDITOR_PREF_STRING);
+                customResolutionPreference.setOnPreferenceClickListener(preference -> {
+                    showCustomResolutionDialog();
+                    return true;
+                });
             }
 
             // hide on-screen controls category on non touch screen devices

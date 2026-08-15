@@ -28,6 +28,7 @@ public class PreferenceConfiguration {
     private static final String LEGACY_ENABLE_51_SURROUND_PREF_STRING = "checkbox_51_surround";
 
     static final String RESOLUTION_PREF_STRING = "list_resolution";
+    static final String CUSTOM_RESOLUTION_PREF_STRING = "custom_resolution_value";
     static final String FPS_PREF_STRING = "list_fps";
     static final String BITRATE_PREF_STRING = "seekbar_bitrate_kbps";
     private static final String BITRATE_PREF_OLD_STRING = "seekbar_bitrate";
@@ -128,6 +129,7 @@ public class PreferenceConfiguration {
     public static final String RES_NATIVE = "Native";
 
     public int width, height, fps;
+    public boolean customResolution;
     public int bitrate;
     public FormatOption videoFormat;
     public int deadzonePercentage;
@@ -192,6 +194,10 @@ public class PreferenceConfiguration {
         return true;
     }
 
+    public boolean isNativeResolution() {
+        return !customResolution && isNativeResolution(width, height);
+    }
+
     // If we have a screen that has semi-square dimensions, we may want to change our behavior
     // to allow any orientation and vertical+horizontal resolutions.
     public static boolean isSquarishScreen(int width, int height) {
@@ -242,12 +248,104 @@ public class PreferenceConfiguration {
         }
     }
 
+    private static final class ResolutionDimensions {
+        final int width;
+        final int height;
+        final boolean custom;
+
+        ResolutionDimensions(int width, int height, boolean custom) {
+            this.width = width;
+            this.height = height;
+            this.custom = custom;
+        }
+    }
+
+    private static ResolutionDimensions parseBareResolutionString(String resString) {
+        if (resString == null) {
+            return null;
+        }
+
+        String normalized = resString.trim();
+        int separator = normalized.indexOf('x');
+        if (separator <= 0 || separator != normalized.lastIndexOf('x') ||
+                separator == normalized.length() - 1) {
+            return null;
+        }
+
+        String widthText = normalized.substring(0, separator);
+        String heightText = normalized.substring(separator + 1);
+        if (!isDecimal(widthText) || !isDecimal(heightText)) {
+            return null;
+        }
+
+        try {
+            long width = Long.parseLong(widthText);
+            long height = Long.parseLong(heightText);
+            if (width <= 0 || width > Integer.MAX_VALUE ||
+                    height <= 0 || height > Integer.MAX_VALUE) {
+                return null;
+            }
+
+            return new ResolutionDimensions((int) width, (int) height, false);
+        }
+        catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
+    private static ResolutionDimensions parseResolutionString(String resString) {
+        if (resString == null) {
+            return null;
+        }
+
+        String normalized = resString.trim();
+        if (CustomResolution.isEncoded(normalized)) {
+            // Custom resolutions are a KATO non-root feature. Keep root behavior isolated.
+            if (BuildConfig.ROOT_BUILD) {
+                return null;
+            }
+
+            CustomResolution.ValidationResult result = CustomResolution.parseEncoded(normalized);
+            if (!result.isValid()) {
+                return null;
+            }
+
+            return new ResolutionDimensions(result.width, result.height, true);
+        }
+
+        return parseBareResolutionString(normalized);
+    }
+
+    private static ResolutionDimensions getResolutionDimensionsOrDefault(String resString) {
+        ResolutionDimensions dimensions = parseResolutionString(resString);
+        if (dimensions != null) {
+            return dimensions;
+        }
+
+        // DEFAULT_RESOLUTION is a compile-time constant with a known-valid value.
+        return parseBareResolutionString(DEFAULT_RESOLUTION);
+    }
+
+    private static boolean isDecimal(String value) {
+        if (value.isEmpty()) {
+            return false;
+        }
+
+        for (int i = 0; i < value.length(); i++) {
+            char c = value.charAt(i);
+            if (c < '0' || c > '9') {
+                return false;
+            }
+        }
+        return true;
+    }
+
     private static int getWidthFromResolutionString(String resString) {
-        return Integer.parseInt(resString.split("x")[0]);
+        return getResolutionDimensionsOrDefault(resString).width;
     }
 
     private static int getHeightFromResolutionString(String resString) {
-        return Integer.parseInt(resString.split("x")[1]);
+        return getResolutionDimensionsOrDefault(resString).height;
     }
 
     private static String getResolutionString(int width, int height) {
@@ -434,6 +532,7 @@ public class PreferenceConfiguration {
                 .remove(BITRATE_PREF_OLD_STRING)
                 .remove(LEGACY_RES_FPS_PREF_STRING)
                 .remove(RESOLUTION_PREF_STRING)
+                .remove(CUSTOM_RESOLUTION_PREF_STRING)
                 .remove(FPS_PREF_STRING)
                 .remove(VIDEO_FORMAT_PREF_STRING)
                 .remove(ENABLE_HDR_PREF_STRING)
@@ -471,6 +570,7 @@ public class PreferenceConfiguration {
 
         String str = prefs.getString(LEGACY_RES_FPS_PREF_STRING, null);
         if (str != null) {
+            config.customResolution = false;
             if (str.equals("360p30")) {
                 config.width = 640;
                 config.height = 360;
@@ -534,8 +634,16 @@ public class PreferenceConfiguration {
                 prefs.edit().putString(RESOLUTION_PREF_STRING, resStr).apply();
             }
 
-            config.width = PreferenceConfiguration.getWidthFromResolutionString(resStr);
-            config.height = PreferenceConfiguration.getHeightFromResolutionString(resStr);
+            ResolutionDimensions dimensions = PreferenceConfiguration.parseResolutionString(resStr);
+            if (dimensions == null) {
+                resStr = PreferenceConfiguration.DEFAULT_RESOLUTION;
+                dimensions = PreferenceConfiguration.getResolutionDimensionsOrDefault(resStr);
+                prefs.edit().putString(RESOLUTION_PREF_STRING, resStr).apply();
+            }
+
+            config.width = dimensions.width;
+            config.height = dimensions.height;
+            config.customResolution = dimensions.custom;
             config.fps = Integer.parseInt(prefs.getString(FPS_PREF_STRING, PreferenceConfiguration.DEFAULT_FPS));
         }
 

@@ -642,7 +642,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
             }
 
             // For native resolution, we will lock the orientation to the one that matches the specified resolution
-            if (PreferenceConfiguration.isNativeResolution(prefConfig.width, prefConfig.height)) {
+            if (prefConfig.isNativeResolution()) {
                 if (prefConfig.width > prefConfig.height) {
                     desiredOrientation = Configuration.ORIENTATION_LANDSCAPE;
                 }
@@ -878,7 +878,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
 
     private boolean shouldIgnoreInsetsForResolution(int width, int height) {
         // Never ignore insets for non-native resolutions
-        if (!PreferenceConfiguration.isNativeResolution(width, height)) {
+        if (!prefConfig.isNativeResolution()) {
             return false;
         }
 
@@ -910,7 +910,7 @@ public class Game extends Activity implements SurfaceHolder.Callback,
         // On M, we can explicitly set the optimal display mode
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             Display.Mode bestMode = display.getMode();
-            boolean isNativeResolutionStream = PreferenceConfiguration.isNativeResolution(prefConfig.width, prefConfig.height);
+            boolean isNativeResolutionStream = prefConfig.isNativeResolution();
             boolean refreshRateIsGood = isRefreshRateGoodMatch(bestMode.getRefreshRate());
             boolean refreshRateIsEqual = isRefreshRateEqualMatch(bestMode.getRefreshRate());
 

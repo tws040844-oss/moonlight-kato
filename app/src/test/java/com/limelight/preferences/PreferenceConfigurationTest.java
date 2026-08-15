@@ -43,4 +43,61 @@ public class PreferenceConfigurationTest {
         assertEquals(38000, PreferenceConfiguration.getDefaultBitrate(
                 PreferenceConfiguration.RES_2496X1404, "60"));
     }
+
+    @Test
+    public void encodedCustomResolutionBitratesAreFlavorScoped() {
+        if (BuildConfig.ROOT_BUILD) {
+            // The root flavor must safely reject KATO's custom prefix and use 720p
+            // while preserving the requested frame rate for bitrate calculation.
+            assertEquals(10000, PreferenceConfiguration.getDefaultBitrate(
+                    "custom:2184x1228", "60"));
+            assertEquals(14000, PreferenceConfiguration.getDefaultBitrate(
+                    "custom:7680x4320", "120"));
+        }
+        else {
+            assertEquals(14000, PreferenceConfiguration.getDefaultBitrate(
+                    "custom:2184x1228", "30"));
+            assertEquals(28000, PreferenceConfiguration.getDefaultBitrate(
+                    "custom:2184x1228", "60"));
+            assertEquals(39000, PreferenceConfiguration.getDefaultBitrate(
+                    "custom:2184x1228", "120"));
+            assertEquals(38000, PreferenceConfiguration.getDefaultBitrate(
+                    "custom:2496x1404", "60"));
+            assertEquals(57000, PreferenceConfiguration.getDefaultBitrate(
+                    "custom:2504x2256", "60"));
+            assertEquals(28000, PreferenceConfiguration.getDefaultBitrate(
+                    "custom:2520x1080", "60"));
+            assertEquals(80000, PreferenceConfiguration.getDefaultBitrate(
+                    "custom:7680x4320", "60"));
+            assertEquals(113000, PreferenceConfiguration.getDefaultBitrate(
+                    "custom:7680x4320", "120"));
+        }
+    }
+
+    @Test
+    public void malformedCustomResolutionBitrateFallsBackWithoutThrowing() {
+        assertEquals(10000, PreferenceConfiguration.getDefaultBitrate(
+                "custom:not-a-resolution", "60"));
+        assertEquals(10000, PreferenceConfiguration.getDefaultBitrate(
+                "custom:999999999999999999999999x1080", "60"));
+        assertEquals(10000, PreferenceConfiguration.getDefaultBitrate(
+                "custom:8192x8192", "60"));
+    }
+
+    @Test
+    public void explicitlyCustomDimensionsNeverUseNativeDisplayBehavior() {
+        PreferenceConfiguration config = new PreferenceConfiguration();
+        config.width = 2504;
+        config.height = 2256;
+
+        config.customResolution = false;
+        assertTrue(config.isNativeResolution());
+
+        config.customResolution = true;
+        assertFalse(config.isNativeResolution());
+
+        config.width = 2520;
+        config.height = 1080;
+        assertFalse(config.isNativeResolution());
+    }
 }
