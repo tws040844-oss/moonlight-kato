@@ -21,6 +21,69 @@ import java.util.concurrent.TimeUnit;
 
 public class PcKeyDispatcherTest {
     @Test
+    public void keyboardTranslatorMapsF1ThroughF12ToWindowsVirtualKeys() {
+        KeyboardTranslator translator = new KeyboardTranslator();
+
+        for (int offset = 0; offset < 12; offset++) {
+            int androidKeyCode = KeyEvent.KEYCODE_F1 + offset;
+            // Anchor the expected Windows VK independently from production constants.
+            int expectedKeyMap = 0x8070 + offset;
+
+            assertEquals("Unexpected mapping for F" + (offset + 1),
+                    expectedKeyMap, translator.translate(androidKeyCode, -1) & 0xFFFF);
+        }
+    }
+
+    @Test
+    public void functionKeysUseTheGenericTapPipeline() {
+        FakeSender sender = new FakeSender();
+        PcKeyDispatcher dispatcher = new PcKeyDispatcher(sender);
+
+        for (int offset = 0; offset < 12; offset++) {
+            int androidKeyCode = KeyEvent.KEYCODE_F1 + offset;
+            assertTrue("F" + (offset + 1) + " should be sent", dispatcher.tapKey(androidKeyCode));
+        }
+
+        assertEquals(12, sender.baseReadCount);
+        assertEquals(12, sender.translateCalls);
+        assertEquals(24, sender.events.size());
+        for (int offset = 0; offset < 12; offset++) {
+            int androidKeyCode = KeyEvent.KEYCODE_F1 + offset;
+            assertEquals(event(androidKeyCode, KeyboardPacket.KEY_DOWN, 0),
+                    sender.events.get(offset * 2));
+            assertEquals(event(androidKeyCode, KeyboardPacket.KEY_UP, 0),
+                    sender.events.get(offset * 2 + 1));
+        }
+        assertAllFlagsNormalized(sender.events);
+    }
+
+    @Test
+    public void functionKeyPreservesLatchedCtrlAndShift() {
+        FakeSender sender = new FakeSender();
+        PcKeyDispatcher dispatcher = new PcKeyDispatcher(sender);
+
+        assertTrue(dispatcher.toggleModifier(PcKeyDispatcher.Modifier.CTRL));
+        assertTrue(dispatcher.toggleModifier(PcKeyDispatcher.Modifier.SHIFT));
+        assertTrue(dispatcher.tapKey(KeyEvent.KEYCODE_F12));
+        assertTrue(dispatcher.isModifierLatched(PcKeyDispatcher.Modifier.CTRL));
+        assertTrue(dispatcher.isModifierLatched(PcKeyDispatcher.Modifier.SHIFT));
+        dispatcher.releaseAll();
+
+        assertEvents(sender,
+                event(KeyEvent.KEYCODE_CTRL_LEFT, KeyboardPacket.KEY_DOWN,
+                        KeyboardPacket.MODIFIER_CTRL),
+                event(KeyEvent.KEYCODE_SHIFT_LEFT, KeyboardPacket.KEY_DOWN,
+                        KeyboardPacket.MODIFIER_CTRL | KeyboardPacket.MODIFIER_SHIFT),
+                event(KeyEvent.KEYCODE_F12, KeyboardPacket.KEY_DOWN,
+                        KeyboardPacket.MODIFIER_CTRL | KeyboardPacket.MODIFIER_SHIFT),
+                event(KeyEvent.KEYCODE_F12, KeyboardPacket.KEY_UP,
+                        KeyboardPacket.MODIFIER_CTRL | KeyboardPacket.MODIFIER_SHIFT),
+                event(KeyEvent.KEYCODE_SHIFT_LEFT, KeyboardPacket.KEY_UP,
+                        KeyboardPacket.MODIFIER_CTRL),
+                event(KeyEvent.KEYCODE_CTRL_LEFT, KeyboardPacket.KEY_UP, 0));
+    }
+
+    @Test
     public void standaloneWinSendsDownAndUpWithNormalizedFlags() {
         FakeSender sender = new FakeSender();
         PcKeyDispatcher dispatcher = new PcKeyDispatcher(sender);
@@ -509,7 +572,11 @@ public class PcKeyDispatcherTest {
 
     private static void assertEvents(FakeSender sender, Event... expected) {
         assertEquals(listOf(expected), sender.events);
-        for (Event event : sender.events) {
+        assertAllFlagsNormalized(sender.events);
+    }
+
+    private static void assertAllFlagsNormalized(List<Event> events) {
+        for (Event event : events) {
             assertEquals("All synthetic packets must use normalized flags", 0, event.flags);
         }
     }

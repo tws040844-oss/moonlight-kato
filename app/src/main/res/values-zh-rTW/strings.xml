@@ -354,4 +354,32 @@
     <string name="pc_key_toolbar_shortcut_magnifier_zoom_out_description">縮小 Windows 放大鏡</string>
     <string name="pc_key_toolbar_shortcut_magnifier_close">關閉放大鏡</string>
     <string name="pc_key_toolbar_shortcut_magnifier_close_description">關閉 Windows 放大鏡</string>
+
+    <!-- Moonlight KATO v0.3 功能鍵 -->
+    <string name="pc_key_toolbar_group_function">功能鍵</string>
+    <string name="pc_key_toolbar_group_function_description">顯示 F1 至 F12 功能鍵</string>
+    <string name="pc_key_toolbar_f1">F1</string>
+    <string name="pc_key_toolbar_f1_description">F1 功能鍵</string>
+    <string name="pc_key_toolbar_f2">F2</string>
+    <string name="pc_key_toolbar_f2_description">F2 功能鍵</string>
+    <string name="pc_key_toolbar_f3">F3</string>
+    <string name="pc_key_toolbar_f3_description">F3 功能鍵</string>
+    <string name="pc_key_toolbar_f4">F4</string>
+    <string name="pc_key_toolbar_f4_description">F4 功能鍵</string>
+    <string name="pc_key_toolbar_f5">F5</string>
+    <string name="pc_key_toolbar_f5_description">F5 功能鍵</string>
+    <string name="pc_key_toolbar_f6">F6</string>
+    <string name="pc_key_toolbar_f6_description">F6 功能鍵</string>
+    <string name="pc_key_toolbar_f7">F7</string>
+    <string name="pc_key_toolbar_f7_description">F7 功能鍵</string>
+    <string name="pc_key_toolbar_f8">F8</string>
+    <string name="pc_key_toolbar_f8_description">F8 功能鍵</string>
+    <string name="pc_key_toolbar_f9">F9</string>
+    <string name="pc_key_toolbar_f9_description">F9 功能鍵</string>
+    <string name="pc_key_toolbar_f10">F10</string>
+    <string name="pc_key_toolbar_f10_description">F10 功能鍵</string>
+    <string name="pc_key_toolbar_f11">F11</string>
+    <string name="pc_key_toolbar_f11_description">F11 功能鍵</string>
+    <string name="pc_key_toolbar_f12">F12</string>
+    <string name="pc_key_toolbar_f12_description">F12 功能鍵</string>
 </resources>

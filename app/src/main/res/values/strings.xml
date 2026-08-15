@@ -379,4 +379,32 @@
     <string name="pc_key_toolbar_shortcut_magnifier_zoom_out_description">Zoom out with Windows Magnifier</string>
     <string name="pc_key_toolbar_shortcut_magnifier_close">Close Magnifier</string>
     <string name="pc_key_toolbar_shortcut_magnifier_close_description">Close Windows Magnifier</string>
+
+    <!-- Moonlight KATO v0.3 function keys -->
+    <string name="pc_key_toolbar_group_function">Function keys</string>
+    <string name="pc_key_toolbar_group_function_description">Show F1 through F12 function keys</string>
+    <string name="pc_key_toolbar_f1">F1</string>
+    <string name="pc_key_toolbar_f1_description">F1 function key</string>
+    <string name="pc_key_toolbar_f2">F2</string>
+    <string name="pc_key_toolbar_f2_description">F2 function key</string>
+    <string name="pc_key_toolbar_f3">F3</string>
+    <string name="pc_key_toolbar_f3_description">F3 function key</string>
+    <string name="pc_key_toolbar_f4">F4</string>
+    <string name="pc_key_toolbar_f4_description">F4 function key</string>
+    <string name="pc_key_toolbar_f5">F5</string>
+    <string name="pc_key_toolbar_f5_description">F5 function key</string>
+    <string name="pc_key_toolbar_f6">F6</string>
+    <string name="pc_key_toolbar_f6_description">F6 function key</string>
+    <string name="pc_key_toolbar_f7">F7</string>
+    <string name="pc_key_toolbar_f7_description">F7 function key</string>
+    <string name="pc_key_toolbar_f8">F8</string>
+    <string name="pc_key_toolbar_f8_description">F8 function key</string>
+    <string name="pc_key_toolbar_f9">F9</string>
+    <string name="pc_key_toolbar_f9_description">F9 function key</string>
+    <string name="pc_key_toolbar_f10">F10</string>
+    <string name="pc_key_toolbar_f10_description">F10 function key</string>
+    <string name="pc_key_toolbar_f11">F11</string>
+    <string name="pc_key_toolbar_f11_description">F11 function key</string>
+    <string name="pc_key_toolbar_f12">F12</string>
+    <string name="pc_key_toolbar_f12_description">F12 function key</string>
 </resources>

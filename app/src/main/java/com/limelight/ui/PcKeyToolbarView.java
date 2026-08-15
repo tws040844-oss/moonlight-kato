@@ -64,7 +64,8 @@ public final class PcKeyToolbarView extends FrameLayout {
         WINDOWS,
         WINDOW,
         EDIT,
-        SYSTEM
+        SYSTEM,
+        FUNCTION
     }
 
     private final SharedPreferences preferences;
@@ -89,15 +90,18 @@ public final class PcKeyToolbarView extends FrameLayout {
     private HorizontalScrollView windowScroll;
     private HorizontalScrollView editScroll;
     private HorizontalScrollView systemScroll;
+    private HorizontalScrollView functionScroll;
     private View groupRow;
     private View windowsRow;
     private View windowRow;
     private View editRow;
     private View systemRow;
+    private View functionRow;
     private TextView windowsGroupButton;
     private TextView windowGroupButton;
     private TextView editGroupButton;
     private TextView systemGroupButton;
+    private TextView functionGroupButton;
 
     private Listener listener;
     private DockSide dockSide;
@@ -166,15 +170,18 @@ public final class PcKeyToolbarView extends FrameLayout {
         windowScroll = findViewById(R.id.pc_key_window_scroll);
         editScroll = findViewById(R.id.pc_key_edit_scroll);
         systemScroll = findViewById(R.id.pc_key_system_scroll);
+        functionScroll = findViewById(R.id.pc_key_function_scroll);
         groupRow = findViewById(R.id.pc_key_group_row);
         windowsRow = findViewById(R.id.pc_key_windows_row);
         windowRow = findViewById(R.id.pc_key_window_row);
         editRow = findViewById(R.id.pc_key_edit_row);
         systemRow = findViewById(R.id.pc_key_system_row);
+        functionRow = findViewById(R.id.pc_key_function_row);
         windowsGroupButton = findViewById(R.id.pc_key_group_windows);
         windowGroupButton = findViewById(R.id.pc_key_group_window);
         editGroupButton = findViewById(R.id.pc_key_group_edit);
         systemGroupButton = findViewById(R.id.pc_key_group_system);
+        functionGroupButton = findViewById(R.id.pc_key_group_function);
 
         dockSide = DOCK_LEFT.equals(preferences.getString(PREF_DOCK_SIDE, DOCK_RIGHT))
                 ? DockSide.LEFT : DockSide.RIGHT;
@@ -221,6 +228,7 @@ public final class PcKeyToolbarView extends FrameLayout {
         windowGroupButton.setOnClickListener(view -> showShortcutGroup(ShortcutGroup.WINDOW));
         editGroupButton.setOnClickListener(view -> showShortcutGroup(ShortcutGroup.EDIT));
         systemGroupButton.setOnClickListener(view -> showShortcutGroup(ShortcutGroup.SYSTEM));
+        functionGroupButton.setOnClickListener(view -> showShortcutGroup(ShortcutGroup.FUNCTION));
 
         bindShortcutButton(R.id.pc_key_shortcut_win_e, PcKeyDispatcher.PcShortcut.WIN_E);
         bindShortcutButton(R.id.pc_key_shortcut_win_r, PcKeyDispatcher.PcShortcut.WIN_R);
@@ -244,6 +252,19 @@ public final class PcKeyToolbarView extends FrameLayout {
         bindShortcutButton(R.id.pc_key_shortcut_ctrl_y, PcKeyDispatcher.PcShortcut.CTRL_Y);
         bindShortcutButton(R.id.pc_key_shortcut_task_manager,
                 PcKeyDispatcher.PcShortcut.TASK_MANAGER);
+
+        bindKeyButton(R.id.pc_key_function_f1, KeyEvent.KEYCODE_F1);
+        bindKeyButton(R.id.pc_key_function_f2, KeyEvent.KEYCODE_F2);
+        bindKeyButton(R.id.pc_key_function_f3, KeyEvent.KEYCODE_F3);
+        bindKeyButton(R.id.pc_key_function_f4, KeyEvent.KEYCODE_F4);
+        bindKeyButton(R.id.pc_key_function_f5, KeyEvent.KEYCODE_F5);
+        bindKeyButton(R.id.pc_key_function_f6, KeyEvent.KEYCODE_F6);
+        bindKeyButton(R.id.pc_key_function_f7, KeyEvent.KEYCODE_F7);
+        bindKeyButton(R.id.pc_key_function_f8, KeyEvent.KEYCODE_F8);
+        bindKeyButton(R.id.pc_key_function_f9, KeyEvent.KEYCODE_F9);
+        bindKeyButton(R.id.pc_key_function_f10, KeyEvent.KEYCODE_F10);
+        bindKeyButton(R.id.pc_key_function_f11, KeyEvent.KEYCODE_F11);
+        bindKeyButton(R.id.pc_key_function_f12, KeyEvent.KEYCODE_F12);
 
         findViewById(R.id.pc_key_hide_session).setOnClickListener(view -> {
             hideForSession();
@@ -561,11 +582,13 @@ public final class PcKeyToolbarView extends FrameLayout {
         windowScroll.setVisibility(group == ShortcutGroup.WINDOW ? VISIBLE : GONE);
         editScroll.setVisibility(group == ShortcutGroup.EDIT ? VISIBLE : GONE);
         systemScroll.setVisibility(group == ShortcutGroup.SYSTEM ? VISIBLE : GONE);
+        functionScroll.setVisibility(group == ShortcutGroup.FUNCTION ? VISIBLE : GONE);
 
         setGroupButtonActive(windowsGroupButton, group == ShortcutGroup.WINDOWS);
         setGroupButtonActive(windowGroupButton, group == ShortcutGroup.WINDOW);
         setGroupButtonActive(editGroupButton, group == ShortcutGroup.EDIT);
         setGroupButtonActive(systemGroupButton, group == ShortcutGroup.SYSTEM);
+        setGroupButtonActive(functionGroupButton, group == ShortcutGroup.FUNCTION);
 
         resizeAndReposition();
         HorizontalScrollView activeScroll = getActiveShortcutScroll();
@@ -585,6 +608,8 @@ public final class PcKeyToolbarView extends FrameLayout {
                 return editScroll;
             case SYSTEM:
                 return systemScroll;
+            case FUNCTION:
+                return functionScroll;
             case WINDOWS:
             default:
                 return windowsScroll;
@@ -678,6 +703,8 @@ public final class PcKeyToolbarView extends FrameLayout {
                 return editRow;
             case SYSTEM:
                 return systemRow;
+            case FUNCTION:
+                return functionRow;
             case WINDOWS:
             default:
                 return windowsRow;
