@@ -51,11 +51,41 @@ keyPassword=<secret>
 
 ```powershell
 .\gradlew.bat :app:testNonRootDebugUnitTest
+.\gradlew.bat :app:testRootDebugUnitTest
 .\gradlew.bat :app:lintNonRootDebug
+.\gradlew.bat :app:lintRootDebug
 .\gradlew.bat :app:assembleNonRootDebug
 .\gradlew.bat :app:assembleNonRootRelease
 .\gradlew.bat :app:assembleRootDebug
 ```
+
+## v0.5 自訂解析度
+
+- KATO nonRoot 在「基本設定」提供「自訂解析度」編輯器，可分別輸入寬度與高度。
+- 自訂值在偏好設定中以 `custom:<width>x<height>` 編碼，例如 `custom:2184x1228`；UI 解析度清單會顯示為「自訂（2184 × 1228）」。
+- 寬、高各自必須介於 256–8192 像素、均為偶數，總像素數不得超過 `7680 × 4320`（33,177,600 像素）。允許任意長寬比、橫向、直向與正方形；不需符合 16:9。
+- 空白、非整數、超出範圍、奇數尺寸或超過 8K UHD 總像素上限時，編輯器會顯示繁中／英文驗證錯誤並不儲存。
+- 若現有 `custom:` 偏好值無效或損壞，`PreferenceConfiguration` 會回復為預設 `1280x720`，避免解析錯誤導致 App 崩潰。
+- 儲存會同步更新自訂原始值、解析度選單值與依當前 FPS 推算的預設位元率；儲存後必須中止並重新連線。
+- 自訂值在 `Game` 中一律視為非 Native，不觸發 Native 專用的方向鎖定、inset 忽略與顯示模式配對。
+- 這只是 Android client 設定；Sunshine 主機顯示器或 VDD 仍必須支援一樣的尺寸，否則無法保證協商成功。
+- root flavor 會從設定畫面移除編輯器，且不接受 `custom:` 值；官方 root 行為維持隔離。
+
+## v0.5 產物狀態
+
+| 項目 | 目前狀態 |
+|---|---|
+| Debug 身分 | `tw.kato.moonlight.debug`／`12.1-kato.0.5-dev`／versionCode `314005` |
+| Release 身分 | `tw.kato.moonlight.unofficial`／`12.1-kato.0.5`／versionCode `314005` |
+| Unit test | PASS；nonRoot、root 各 46 tests／0 failures／0 errors／0 skipped |
+| Lint | PASS；nonRoot 0 errors／187 warnings，root 0 errors／188 warnings |
+| Debug／Release／Root Debug | 三者皆建置 PASS；Root versionName 維持 `12.1` |
+| Release 目標檔名 | `dist\Moonlight-KATO-12.1-kato.0.5.apk` |
+| Release APK 大小 | 8,007,881 bytes |
+| Release SHA-256 | `3F60C2F8D146A934E68DAB7BF7EBF83E5CF201BC12988D92E20C15E129BB95F7` |
+| Release 簽章 readback | v1／v2 PASS；憑證 SHA-256 `d39be840d3ca9501310b561becf21f4f0459ebb617fc93915e1656f1410ca85f`；RSA 3072-bit |
+| APK 內嵌 revision | `f6974088ff24035cfb158f56ba54d0784934a902` |
+| 實機安裝／UI／串流協商 | ADB 目前無裝置；尚未安裝，待 Fold 重新連線後驗收 |
 
 ## v0.4 解析度變更
 
@@ -91,7 +121,7 @@ keyPassword=<secret>
 - 「功能鍵」分組新增 F1～F12 單次點按，並可與 Ctrl／Shift 鎖定狀態組合。VK `0x70`～`0x7B` 均由 translator 轉為 keyMap `0x8070`～`0x807B`，不硬編送出協定值。
 - `PcKeyDispatcherTest` 現有 27 項測試，最新報告為 27 tests／0 failures／0 errors／0 skipped。
 
-Moonlight Android 目前沒有 client 端 pinch-to-zoom。即使關閉觸控板模式，第二根手指仍由既有輸入路徑轉為滑鼠滾輪；原生多點觸控轉送程式碼目前被註解。v0.2～v0.4 未改動串流 Surface、座標映射或 native input，Windows 放大鏡快捷鍵是安全替代方案。
+Moonlight Android 目前沒有 client 端 pinch-to-zoom。即使關閉觸控板模式，第二根手指仍由既有輸入路徑轉為滑鼠滾輪；原生多點觸控轉送程式碼目前被註解。v0.2～v0.5 未改動串流 Surface、座標映射或 native input，Windows 放大鏡快捷鍵是安全替代方案。
 
 ## v0.3 歷史產物狀態
 

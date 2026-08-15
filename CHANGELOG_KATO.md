@@ -1,5 +1,19 @@
 # Moonlight KATO 變更記錄
 
+## 0.5.0（自訂解析度實機驗收待完成）
+
+- 版本更新為 Release `12.1-kato.0.5`、Debug `12.1-kato.0.5-dev`，versionCode `314005`；package ID 與 release signing identity 維持不變。
+- 「基本設定」新增繁中／英文自訂解析度編輯器，可分別輸入寬度與高度；儲存後解析度清單顯示「自訂（W × H）」，往後可直接修改，不必為每組尺寸重新建置 APK。
+- 自訂值以 `custom:WxH` 保存，與相同尺寸的 Native 項目明確區分。即使尺寸等於 Fold 面板，仍視為非 Native，不會誤套方向鎖定、inset 忽略或顯示模式配對。
+- 驗證範圍為每邊 256–8192、寬高皆為偶數、總像素不超過 `7680 × 4320`；允許任意比例、橫向、直向與方形。驗證失敗不會關閉對話框或寫入設定。
+- 儲存時同步更新最後自訂值、目前解析度與依 FPS 計算的預設位元率；無效或損壞的 `custom:` 值會安全回復 `1280x720`。
+- Root 設定頁移除自訂入口並拒絕 `custom:` 值；Sunshine、VDD、Moonlight native code、串流協定與原有固定解析度均未修改。
+- nonRoot、root 各 46 項單元測試全數通過；lint 分別為 0 errors／187 warnings 與 0 errors／188 warnings；nonRoot Debug、nonRoot Release、Root Debug 均建置 PASS。
+- Release APK：`dist\Moonlight-KATO-12.1-kato.0.5.apk`，8,007,881 bytes，SHA-256 `3F60C2F8D146A934E68DAB7BF7EBF83E5CF201BC12988D92E20C15E129BB95F7`。
+- Release 簽章 readback：v1／v2 PASS；憑證 SHA-256 `d39be840d3ca9501310b561becf21f4f0459ebb617fc93915e1656f1410ca85f`；RSA 3072-bit；APK 內嵌 revision 為 `f6974088ff24035cfb158f56ba54d0784934a902`。
+
+實際串流仍要求 Sunshine 主機顯示器或 VDD 支援相同解析度，且儲存後必須完整中止並重新連線。當前 ADB 清單無裝置，因此不宣稱 v0.5 已安裝；覆蓋安裝、對話框顯示、保存重啟與串流 readback 尚待 Fold 實機驗收。
+
 ## 0.4.0（解析度實機驗收待完成）
 
 - 版本更新為 Release `12.1-kato.0.4`、Debug `12.1-kato.0.4-dev`，versionCode `314004`；package ID 與 release signing identity 維持不變。

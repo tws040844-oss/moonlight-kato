@@ -1,6 +1,6 @@
-# Moonlight KATO v0.4 測試矩陣
+# Moonlight KATO v0.5 測試矩陣
 
-狀態標記：`PASS`、`FAIL`、`BLOCKED`、`待使用者驗收`、`N/A`。自動化測試結果與 Fold 人工驗收分開計算；既有輸入功能的正常使用回報不得直接視為 v0.4 新解析度的實機 PASS。
+狀態標記：`PASS`、`FAIL`、`BLOCKED`、`待使用者驗收`、`N/A`。自動化測試結果與 Fold 人工驗收分開計算；既有版本的正常使用回報不得直接視為 v0.5 自訂解析度 UI 與串流協商的實機 PASS。
 
 ## 自動化測試
 
@@ -25,7 +25,12 @@
 | 解析度分類 | nonRoot 將 2184x1228／2496x1404 視為固定非 Native；root 維持 Native；2504x2256 仍為 Native | PASS |
 | 解析度資源隔離 | nonRoot 為 8 組同序名稱／值；root 維持官方 6 組且不含 KATO 說明字串 | PASS |
 | 預設位元率 | 2184x1228@60 為 28,000 kbps；2496x1404@60 為 38,000 kbps | PASS |
-| JUnit | nonRoot、root 各 31 tests／0 failures／0 errors／0 skipped | PASS |
+| 自訂值格式 | `custom:WxH` 與 raw `WxH` 可正規化、往返解析；無效 prefix／overflow 安全拒絕 | PASS |
+| 自訂值驗證 | 256–8192、寬高偶數、總像素不超過 7680×4320；橫向／直向／方形皆可 | PASS |
+| 自訂 Native 分類 | `custom:2504x2256` 與其他自訂尺寸均視為非 Native；相同 bare 尺寸仍可維持 Native | PASS |
+| 自訂位元率 | 2184×1228、2496×1404、2504×2256、2520×1080、8K 的 30／60／120 FPS 計算符合既有公式 | PASS |
+| Root prefix 隔離 | root 遇到 `custom:` 時安全回復 1280×720，不崩潰、不啟用 KATO 自訂行為 | PASS |
+| JUnit | nonRoot、root 各 46 tests／0 failures／0 errors／0 skipped | PASS |
 | Lint | nonRoot 0 errors／187 warnings；root 0 errors／188 warnings | PASS |
 | Debug／Release | `assembleNonRootDebug`、`assembleNonRootRelease` | PASS |
 | Root flavor 回歸 | `assembleRootDebug`，package `com.limelight.root.debug`、versionName `12.1` | PASS |
@@ -34,19 +39,21 @@
 
 | 區域 | 驗收項目 | 狀態／證據 |
 |---|---|---|
-| 安裝與身分 | KATO Release v0.4 覆蓋安裝；package、versionName、versionCode 正確 | 待 ADB 重新連線 |
+| 安裝與身分 | KATO Release v0.5 覆蓋安裝；package、versionName、versionCode 正確 | 待 ADB 重新連線 |
 | 資料保留 | 覆蓋安裝不得改變 `firstInstallTime`，且不得清除 App data | 待 ADB 重新連線 |
-| 解析度清單 | 繁中選項完整顯示且無裁切；root 不出現 KATO 選項 | 待使用者驗收 |
-| 2184x1228 串流 | 選取後完整重連，Sunshine／效能統計顯示 2184x1228 | 待使用者驗收 |
-| 2496x1404 串流 | 選取後完整重連，Sunshine／效能統計顯示 2496x1404 | 待使用者驗收 |
-| 並存 | 官方、KATO Debug、KATO Release 同時安裝 | v0.4 未重新完整盤點，待使用者驗收 |
-| 基本輸入 | Win、Ctrl、Shift、Caps、Esc、Tab、四向鍵 | 既有版本使用者回報正常；v0.4 回歸待驗收 |
-| 修飾鍵鎖定 | Ctrl／Shift 啟用狀態、組合輸入、關閉與生命週期釋放 | 既有版本使用者回報正常；v0.4 回歸待驗收 |
-| 分組快捷鍵 | Windows、視窗、編輯、系統、功能鍵五組選單及所有 chord | v0.4 回歸待驗收 |
-| F1～F12 | F1～F12 單次點按符合 Windows 11／目標應用程式預期 | v0.4 回歸待驗收 |
-| 功能鍵組合 | Ctrl+F1～F12、Shift+F1～F12 的 latch 組合與釋放 | v0.4 回歸待驗收 |
-| Windows 放大鏡 | 放大、縮小、關閉皆符合 Windows 11 預期 | 既有版本使用者回報正常；v0.4 回歸待驗收 |
-| IME | 三指與工具列按鈕切換 Samsung Keyboard | 既有版本使用者回報正常；v0.4 回歸待驗收 |
+| 自訂解析度入口 | 基本設定顯示繁中「自訂解析度」；root 不顯示 | 待使用者驗收 |
+| 對話框 | 寬高欄位可捲動、長字與鍵盤不裁切；取消零寫入；錯誤時不關閉 | 待使用者驗收 |
+| 驗證提示 | 空白、非整數、奇數、超出範圍與超過 8K 總像素均顯示正確繁中提示 | 待使用者驗收 |
+| 保存與重啟 | 儲存後清單選中「自訂（W × H）」；離開設定或重啟 App 後仍保留 | 待使用者驗收 |
+| 自訂串流 | 以 2520×1080、2504×2256 或其他主機已支援尺寸完整重連，Sunshine／效能統計顯示相同值 | 待使用者驗收 |
+| 並存 | 官方、KATO Debug、KATO Release 同時安裝 | v0.5 未重新完整盤點，待使用者驗收 |
+| 基本輸入 | Win、Ctrl、Shift、Caps、Esc、Tab、四向鍵 | 既有版本使用者回報正常；v0.5 回歸待驗收 |
+| 修飾鍵鎖定 | Ctrl／Shift 啟用狀態、組合輸入、關閉與生命週期釋放 | 既有版本使用者回報正常；v0.5 回歸待驗收 |
+| 分組快捷鍵 | Windows、視窗、編輯、系統、功能鍵五組選單及所有 chord | v0.5 回歸待驗收 |
+| F1～F12 | F1～F12 單次點按符合 Windows 11／目標應用程式預期 | v0.5 回歸待驗收 |
+| 功能鍵組合 | Ctrl+F1～F12、Shift+F1～F12 的 latch 組合與釋放 | v0.5 回歸待驗收 |
+| Windows 放大鏡 | 放大、縮小、關閉皆符合 Windows 11 預期 | 既有版本使用者回報正常；v0.5 回歸待驗收 |
+| IME | 三指與工具列按鈕切換 Samsung Keyboard | 既有版本使用者回報正常；v0.5 回歸待驗收 |
 | 中文輸入 | 標準／分割鍵盤中英文輸入 | 待使用者驗收 |
 | Fold | 內外螢幕、折疊、展開、橫直向後仍可見 | 待使用者驗收 |
 | 觸控隔離 | 拖曳／點擊不產生遠端滑鼠事件 | 待使用者驗收 |
@@ -59,14 +66,14 @@
 
 ## Pinch-to-zoom 說明
 
-Moonlight Android 目前沒有 client 端 pinch-to-zoom：兩指操作在現有 touch context 中用於 mouse scroll，而原生多點觸控 forwarding 程式碼目前被註解。因此關閉觸控板模式也不會讓雙指手勢縮放串流畫面，此項在 v0.4 屬於 `N/A`，不是待修正的工具列回歸。
+Moonlight Android 目前沒有 client 端 pinch-to-zoom：兩指操作在現有 touch context 中用於 mouse scroll，而原生多點觸控 forwarding 程式碼目前被註解。因此關閉觸控板模式也不會讓雙指手勢縮放串流畫面，此項在 v0.5 屬於 `N/A`，不是待修正的工具列回歸。
 
-若目的是放大 Windows 內容，請驗收「Windows」分組中的放大鏡放大、縮小與關閉快捷鍵。真正的串流畫面縮放需另行實作 Surface scale／crop 與反向座標映射，不納入 v0.4。
+若目的是放大 Windows 內容，請驗收「Windows」分組中的放大鏡放大、縮小與關閉快捷鍵。真正的串流畫面縮放需另行實作 Surface scale／crop 與反向座標映射，不納入 v0.5。
 
-## v0.1～v0.3 實機歷史
+## v0.1～v0.4 實機歷史
 
-使用者已在 Fold／Windows 11 實際測試 v0.1，並回報當時功能運作正常。v0.2 後續亦完成安裝，使用者回報目前功能正常，並建立本機 tag `kato-v0.2.0`。v0.3 已完成覆蓋安裝與身分 readback。這些歷史紀錄不直接證明 v0.4 新增解析度已成功協商。
+使用者已在 Fold／Windows 11 實際測試 v0.1，並回報當時功能運作正常。v0.2 後續亦完成安裝，使用者回報目前功能正常，並建立本機 tag `kato-v0.2.0`。v0.3 已完成覆蓋安裝與身分 readback；v0.4 已完成建置與靜態驗證。這些歷史紀錄不直接證明 v0.5 自訂解析度 UI 與新工作階段協商已通過。
 
 ## 人工關卡
 
-v0.4 已沿用相同 release package 與 keystore，因此可用 `adb install -r` 覆蓋 v0.3 並保留 App data。當前 ADB 清單無裝置，安裝 readback、長中文選項目視檢查與兩個解析度的串流協商仍是人工關卡。浮動 Samsung Keyboard 模式不列入 v0.4 保證。
+v0.5 已沿用相同 release package 與 keystore，因此可用 `adb install -r` 覆蓋既有 KATO Release 並保留 App data。當前 ADB 清單無裝置，安裝 readback、自訂對話框目視檢查、保存重啟與實際串流協商仍是人工關卡。浮動 Samsung Keyboard 模式不列入 v0.5 保證。
