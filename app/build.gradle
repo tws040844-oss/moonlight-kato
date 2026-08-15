@@ -55,8 +55,8 @@ android {
             }
 
             applicationId "tw.kato.moonlight"
-            versionNameSuffix "-kato.0.3"
-            versionCode 314003
+            versionNameSuffix "-kato.0.4"
+            versionCode 314004
             dimension "root"
             buildConfigField "boolean", "ROOT_BUILD", "false"
         }
@@ -156,7 +156,7 @@ android {
     applicationVariants.configureEach { variant ->
         if (variant.flavorName == "nonRoot" && variant.buildType.name == "debug") {
             variant.outputs.configureEach { output ->
-                output.versionNameOverride = "12.1-kato.0.3-dev"
+                output.versionNameOverride = "12.1-kato.0.4-dev"
             }
         }
     }

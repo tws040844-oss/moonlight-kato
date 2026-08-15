@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="resolution_2184x1228">2184 × 1228（高效率，近 16:9，較省頻寬）</string>
+    <string name="resolution_2496x1404">2496 × 1404（Fold8 Ultra 精確 16:9，較清晰）</string>
+</resources>

@@ -7,6 +7,7 @@ import android.os.Build;
 import android.preference.PreferenceManager;
 import android.view.Display;
 
+import com.limelight.BuildConfig;
 import com.limelight.nvstream.jni.MoonBridge;
 
 public class PreferenceConfiguration {
@@ -120,6 +121,8 @@ public class PreferenceConfiguration {
     public static final String RES_480P = "854x480";
     public static final String RES_720P = "1280x720";
     public static final String RES_1080P = "1920x1080";
+    public static final String RES_2184X1228 = "2184x1228";
+    public static final String RES_2496X1404 = "2496x1404";
     public static final String RES_1440P = "2560x1440";
     public static final String RES_4K = "3840x2160";
     public static final String RES_NATIVE = "Native";
@@ -171,6 +174,12 @@ public class PreferenceConfiguration {
             return false;
         }
         else if (width == 1920 && height == 1080) {
+            return false;
+        }
+        else if (!BuildConfig.ROOT_BUILD && width == 2184 && height == 1228) {
+            return false;
+        }
+        else if (!BuildConfig.ROOT_BUILD && width == 2496 && height == 1404) {
             return false;
         }
         else if (width == 2560 && height == 1440) {
