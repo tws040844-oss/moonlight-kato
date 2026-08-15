@@ -1,6 +1,6 @@
-# Moonlight KATO v0.3 測試矩陣
+# Moonlight KATO v0.4 測試矩陣
 
-狀態標記：`PASS`、`FAIL`、`BLOCKED`、`待使用者驗收`、`N/A`。自動化測試結果與 Fold 人工驗收分開計算；v0.2 的正常使用回報不得直接繼承為 v0.3 的 F1～F12 實機 PASS。
+狀態標記：`PASS`、`FAIL`、`BLOCKED`、`待使用者驗收`、`N/A`。自動化測試結果與 Fold 人工驗收分開計算；既有輸入功能的正常使用回報不得直接視為 v0.4 新解析度的實機 PASS。
 
 ## 自動化測試
 
@@ -22,8 +22,11 @@
 | sender 失敗 | `finally` 盡力反向清除 owned modifier | PASS |
 | 中斷／失敗清理 | 清除本機鎖定狀態；可送達時反向釋放 synthetic modifier | PASS |
 | 連續及併發呼叫 | 100 次連續 chord 與併發請求均保持完整序列，不交錯、不殘留 state | PASS |
-| JUnit | 27 tests／0 failures／0 errors／0 skipped | PASS |
-| Lint | `lintNonRootDebug`：0 errors／187 warnings | PASS |
+| 解析度分類 | nonRoot 將 2184x1228／2496x1404 視為固定非 Native；root 維持 Native；2504x2256 仍為 Native | PASS |
+| 解析度資源隔離 | nonRoot 為 8 組同序名稱／值；root 維持官方 6 組且不含 KATO 說明字串 | PASS |
+| 預設位元率 | 2184x1228@60 為 28,000 kbps；2496x1404@60 為 38,000 kbps | PASS |
+| JUnit | nonRoot、root 各 31 tests／0 failures／0 errors／0 skipped | PASS |
+| Lint | nonRoot 0 errors／187 warnings；root 0 errors／188 warnings | PASS |
 | Debug／Release | `assembleNonRootDebug`、`assembleNonRootRelease` | PASS |
 | Root flavor 回歸 | `assembleRootDebug`，package `com.limelight.root.debug`、versionName `12.1` | PASS |
 
@@ -31,16 +34,19 @@
 
 | 區域 | 驗收項目 | 狀態／證據 |
 |---|---|---|
-| 安裝與身分 | KATO Release v0.3 覆蓋安裝；package、versionName、versionCode 正確 | PASS；裝置 `SM-F9760` |
-| 資料保留 | 覆蓋安裝不得改變 `firstInstallTime`，且不得清除 App data | `firstInstallTime` PASS；Sunshine 配對待使用者開啟確認 |
-| 並存 | 官方、KATO Debug、KATO Release 同時安裝 | v0.3 未重新完整盤點，待使用者驗收 |
-| 基本輸入 | Win、Ctrl、Shift、Caps、Esc、Tab、四向鍵 | v0.2 使用者回報正常；v0.3 待使用者驗收 |
-| 修飾鍵鎖定 | Ctrl／Shift 啟用狀態、組合輸入、關閉與生命週期釋放 | v0.2 使用者回報正常；v0.3 待使用者驗收 |
-| 分組快捷鍵 | Windows、視窗、編輯、系統、功能鍵五組選單及所有 chord | 待使用者驗收 |
-| F1～F12 | F1～F12 單次點按符合 Windows 11／目標應用程式預期 | 待使用者驗收 |
-| 功能鍵組合 | Ctrl+F1～F12、Shift+F1～F12 的 latch 組合與釋放 | 待使用者驗收 |
-| Windows 放大鏡 | 放大、縮小、關閉皆符合 Windows 11 預期 | v0.2 使用者回報正常；v0.3 待使用者驗收 |
-| IME | 三指與工具列按鈕切換 Samsung Keyboard | v0.2 使用者回報正常；v0.3 待使用者驗收 |
+| 安裝與身分 | KATO Release v0.4 覆蓋安裝；package、versionName、versionCode 正確 | 待 ADB 重新連線 |
+| 資料保留 | 覆蓋安裝不得改變 `firstInstallTime`，且不得清除 App data | 待 ADB 重新連線 |
+| 解析度清單 | 繁中選項完整顯示且無裁切；root 不出現 KATO 選項 | 待使用者驗收 |
+| 2184x1228 串流 | 選取後完整重連，Sunshine／效能統計顯示 2184x1228 | 待使用者驗收 |
+| 2496x1404 串流 | 選取後完整重連，Sunshine／效能統計顯示 2496x1404 | 待使用者驗收 |
+| 並存 | 官方、KATO Debug、KATO Release 同時安裝 | v0.4 未重新完整盤點，待使用者驗收 |
+| 基本輸入 | Win、Ctrl、Shift、Caps、Esc、Tab、四向鍵 | 既有版本使用者回報正常；v0.4 回歸待驗收 |
+| 修飾鍵鎖定 | Ctrl／Shift 啟用狀態、組合輸入、關閉與生命週期釋放 | 既有版本使用者回報正常；v0.4 回歸待驗收 |
+| 分組快捷鍵 | Windows、視窗、編輯、系統、功能鍵五組選單及所有 chord | v0.4 回歸待驗收 |
+| F1～F12 | F1～F12 單次點按符合 Windows 11／目標應用程式預期 | v0.4 回歸待驗收 |
+| 功能鍵組合 | Ctrl+F1～F12、Shift+F1～F12 的 latch 組合與釋放 | v0.4 回歸待驗收 |
+| Windows 放大鏡 | 放大、縮小、關閉皆符合 Windows 11 預期 | 既有版本使用者回報正常；v0.4 回歸待驗收 |
+| IME | 三指與工具列按鈕切換 Samsung Keyboard | 既有版本使用者回報正常；v0.4 回歸待驗收 |
 | 中文輸入 | 標準／分割鍵盤中英文輸入 | 待使用者驗收 |
 | Fold | 內外螢幕、折疊、展開、橫直向後仍可見 | 待使用者驗收 |
 | 觸控隔離 | 拖曳／點擊不產生遠端滑鼠事件 | 待使用者驗收 |
@@ -53,14 +59,14 @@
 
 ## Pinch-to-zoom 說明
 
-Moonlight Android 目前沒有 client 端 pinch-to-zoom：兩指操作在現有 touch context 中用於 mouse scroll，而原生多點觸控 forwarding 程式碼目前被註解。因此關閉觸控板模式也不會讓雙指手勢縮放串流畫面，此項在 v0.3 屬於 `N/A`，不是待修正的工具列回歸。
+Moonlight Android 目前沒有 client 端 pinch-to-zoom：兩指操作在現有 touch context 中用於 mouse scroll，而原生多點觸控 forwarding 程式碼目前被註解。因此關閉觸控板模式也不會讓雙指手勢縮放串流畫面，此項在 v0.4 屬於 `N/A`，不是待修正的工具列回歸。
 
-若目的是放大 Windows 內容，請驗收「Windows」分組中的放大鏡放大、縮小與關閉快捷鍵。真正的串流畫面縮放需另行實作 Surface scale／crop 與反向座標映射，不納入 v0.3。
+若目的是放大 Windows 內容，請驗收「Windows」分組中的放大鏡放大、縮小與關閉快捷鍵。真正的串流畫面縮放需另行實作 Surface scale／crop 與反向座標映射，不納入 v0.4。
 
-## v0.1／v0.2 實機歷史
+## v0.1～v0.3 實機歷史
 
-使用者已在 Fold／Windows 11 實際測試 v0.1，並回報當時功能運作正常。v0.2 後續亦完成安裝，使用者回報目前功能正常，並建立本機 tag `kato-v0.2.0`。這些歷史紀錄不直接證明 v0.3 新增的 F1～F12；v0.3 功能鍵仍須完成上表人工驗收。
+使用者已在 Fold／Windows 11 實際測試 v0.1，並回報當時功能運作正常。v0.2 後續亦完成安裝，使用者回報目前功能正常，並建立本機 tag `kato-v0.2.0`。v0.3 已完成覆蓋安裝與身分 readback。這些歷史紀錄不直接證明 v0.4 新增解析度已成功協商。
 
 ## 人工關卡
 
-v0.3 已沿用相同 release package 與 keystore，以 `adb install -r` 覆蓋安裝；package readback 正確、`firstInstallTime` 不變且未執行資料清除。既有 Sunshine 配對與 F1～F12、Ctrl／Shift 組合由使用者開啟後確認。浮動 Samsung Keyboard 模式不列入 v0.3 保證。
+v0.4 已沿用相同 release package 與 keystore，因此可用 `adb install -r` 覆蓋 v0.3 並保留 App data。當前 ADB 清單無裝置，安裝 readback、長中文選項目視檢查與兩個解析度的串流協商仍是人工關卡。浮動 Samsung Keyboard 模式不列入 v0.4 保證。

@@ -1,5 +1,18 @@
 # Moonlight KATO 變更記錄
 
+## 0.4.0（解析度實機驗收待完成）
+
+- 版本更新為 Release `12.1-kato.0.4`、Debug `12.1-kato.0.4-dev`，versionCode `314004`；package ID 與 release signing identity 維持不變。
+- KATO nonRoot 解析度清單新增 `2184x1228` 與 `2496x1404`，放在 1080p 與 1440p 之間。
+- 繁中顯示為「2184 × 1228（高效率，近 16:9，較省頻寬）」與「2496 × 1404（Fold8 Ultra 精確 16:9，較清晰）」；英文介面亦有對應說明。
+- 解析度資源只覆寫 nonRoot flavor；root flavor 仍為官方六個固定選項。兩個 KATO 尺寸只在 nonRoot 被視為固定非 Native，`2504x2256` 等裝置尺寸仍維持動態 Native 行為。
+- 不修改 Sunshine、VDD、Moonlight native code、串流協定或位元率演算法。60 FPS 預設位元率測試為 28,000／38,000 kbps。
+- nonRoot、root 各 31 項單元測試全數通過；lint 分別為 0 errors／187 warnings 與 0 errors／188 warnings；nonRoot Debug、nonRoot Release、Root Debug 均建置 PASS。
+- Release APK：`dist\Moonlight-KATO-12.1-kato.0.4.apk`，7,997,847 bytes，SHA-256 `07360EC7AEE1CE5A83C5F80D91C61E267DA1DD3ADB8D4CBF694AA929827A9BE3`。
+- Release 簽章 readback：v1／v2 PASS；憑證 SHA-256 `d39be840d3ca9501310b561becf21f4f0459ebb617fc93915e1656f1410ca85f`；RSA 3072-bit；APK 內嵌 revision 為 `afdb8f88a276e4f46a52ddeccf2c79d27526a1fa`。
+
+切換解析度後必須完整中止並重新連線，新的尺寸才會在串流建立時協商。當前 ADB 裝置清單為空，因此覆蓋安裝、長中文選項目視檢查與實際解析度 readback 尚待完成。
+
 ## 0.3.0（功能鍵待使用者驗收）
 
 - 版本更新為 Release `12.1-kato.0.3`、Debug `12.1-kato.0.3-dev`，versionCode `314003`；package ID 與 release signing identity 維持不變。

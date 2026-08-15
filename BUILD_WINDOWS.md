@@ -57,7 +57,32 @@ keyPassword=<secret>
 .\gradlew.bat :app:assembleRootDebug
 ```
 
-## v0.3 輸入與介面變更
+## v0.4 解析度變更
+
+- KATO nonRoot 的固定清單新增 `2184x1228` 與 `2496x1404`，位置在 1080p 與 1440p 之間。
+- 繁中顯示為「2184 × 1228（高效率，近 16:9，較省頻寬）」與「2496 × 1404（Fold8 Ultra 精確 16:9，較清晰）」；英文資源提供對應 fallback。
+- 解析度資源使用 `app/src/nonRoot/res` 覆寫，root flavor 仍保留官方六個固定選項。
+- `2184x1228` 與 `2496x1404` 只在 nonRoot 被判定為固定、非 Native 選項；`2504x2256` 等裝置回報尺寸仍維持動態 Native 行為。
+- 既有位元率內插不需修改；60 FPS 預設分別為 28,000 kbps 與 38,000 kbps。
+- 切換選項後需中止並重新連線，解析度會在新的串流工作階段協商。
+
+## v0.4 產物狀態
+
+| 項目 | 目前狀態 |
+|---|---|
+| Debug 身分 | `tw.kato.moonlight.debug`／`12.1-kato.0.4-dev`／versionCode `314004` |
+| Release 身分 | `tw.kato.moonlight.unofficial`／`12.1-kato.0.4`／versionCode `314004` |
+| Unit test | PASS；nonRoot、root 各 31 tests／0 failures／0 errors／0 skipped |
+| Lint | PASS；nonRoot 0 errors／187 warnings，root 0 errors／188 warnings |
+| Debug／Release／Root Debug | 三者皆建置 PASS；Root versionName 維持 `12.1` |
+| Release 目標檔名 | `dist\Moonlight-KATO-12.1-kato.0.4.apk` |
+| Release APK 大小 | 7,997,847 bytes |
+| Release SHA-256 | `07360EC7AEE1CE5A83C5F80D91C61E267DA1DD3ADB8D4CBF694AA929827A9BE3` |
+| Release 簽章 readback | v1／v2 PASS；憑證 SHA-256 `d39be840d3ca9501310b561becf21f4f0459ebb617fc93915e1656f1410ca85f`；RSA 3072-bit |
+| APK 內嵌 revision | `afdb8f88a276e4f46a52ddeccf2c79d27526a1fa` |
+| 實機安裝／長字串顯示 | 待 ADB 裝置重新連線後覆蓋安裝與目視驗收 |
+
+## v0.3 輸入與介面歷史變更
 
 - Ctrl 與 Shift 改為可點按切換的鎖定修飾鍵；啟用狀態會在工具列上顯示，生命週期清理時會釋放 KATO 擁有的 synthetic key state。
 - Caps 以單次 Caps Lock 按鍵事件切換 Windows 英文大小寫狀態。
@@ -66,9 +91,9 @@ keyPassword=<secret>
 - 「功能鍵」分組新增 F1～F12 單次點按，並可與 Ctrl／Shift 鎖定狀態組合。VK `0x70`～`0x7B` 均由 translator 轉為 keyMap `0x8070`～`0x807B`，不硬編送出協定值。
 - `PcKeyDispatcherTest` 現有 27 項測試，最新報告為 27 tests／0 failures／0 errors／0 skipped。
 
-Moonlight Android 目前沒有 client 端 pinch-to-zoom。即使關閉觸控板模式，第二根手指仍由既有輸入路徑轉為滑鼠滾輪；原生多點觸控轉送程式碼目前被註解。v0.2／v0.3 未改動串流 Surface、座標映射或 native input，Windows 放大鏡快捷鍵是安全替代方案。
+Moonlight Android 目前沒有 client 端 pinch-to-zoom。即使關閉觸控板模式，第二根手指仍由既有輸入路徑轉為滑鼠滾輪；原生多點觸控轉送程式碼目前被註解。v0.2～v0.4 未改動串流 Surface、座標映射或 native input，Windows 放大鏡快捷鍵是安全替代方案。
 
-## v0.3 產物狀態
+## v0.3 歷史產物狀態
 
 | 項目 | 目前狀態 |
 |---|---|
