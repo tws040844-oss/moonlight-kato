@@ -57,30 +57,45 @@ keyPassword=<secret>
 .\gradlew.bat :app:assembleRootDebug
 ```
 
-## v0.2 輸入與介面變更
+## v0.3 輸入與介面變更
 
 - Ctrl 與 Shift 改為可點按切換的鎖定修飾鍵；啟用狀態會在工具列上顯示，生命週期清理時會釋放 KATO 擁有的 synthetic key state。
 - Caps 以單次 Caps Lock 按鍵事件切換 Windows 英文大小寫狀態。
-- 快捷鍵依「Windows、視窗、編輯、系統」分組，避免主工具列過長。
+- 快捷鍵依「Windows、視窗、編輯、系統、功能鍵」分組，避免主工具列過長。
 - 「Windows」分組加入 Windows 放大鏡的放大、縮小與關閉快捷鍵。
-- `PcKeyDispatcherTest` 現有 24 項測試，最新報告為 24 tests／0 failures／0 errors／0 skipped。
+- 「功能鍵」分組新增 F1～F12 單次點按，並可與 Ctrl／Shift 鎖定狀態組合。VK `0x70`～`0x7B` 均由 translator 轉為 keyMap `0x8070`～`0x807B`，不硬編送出協定值。
+- `PcKeyDispatcherTest` 現有 27 項測試，最新報告為 27 tests／0 failures／0 errors／0 skipped。
 
-Moonlight Android 目前沒有 client 端 pinch-to-zoom。即使關閉觸控板模式，第二根手指仍由既有輸入路徑轉為滑鼠滾輪；原生多點觸控轉送程式碼目前被註解。v0.2 未改動串流 Surface、座標映射或 native input，Windows 放大鏡快捷鍵是本版的安全替代方案。
+Moonlight Android 目前沒有 client 端 pinch-to-zoom。即使關閉觸控板模式，第二根手指仍由既有輸入路徑轉為滑鼠滾輪；原生多點觸控轉送程式碼目前被註解。v0.2／v0.3 未改動串流 Surface、座標映射或 native input，Windows 放大鏡快捷鍵是安全替代方案。
 
-## v0.2 產物狀態
+## v0.3 產物狀態
 
 | 項目 | 目前狀態 |
 |---|---|
-| Debug 身分 | `tw.kato.moonlight.debug`／`12.1-kato.0.2-dev`／versionCode `314002` |
-| Release 身分 | `tw.kato.moonlight.unofficial`／`12.1-kato.0.2`／versionCode `314002` |
-| Unit test | PASS，24 tests／0 failures／0 errors／0 skipped |
+| Debug 身分 | `tw.kato.moonlight.debug`／`12.1-kato.0.3-dev`／versionCode `314003` |
+| Release 身分 | `tw.kato.moonlight.unofficial`／`12.1-kato.0.3`／versionCode `314003` |
+| Unit test | PASS，27 tests／0 failures／0 errors／0 skipped |
 | Lint | PASS，0 errors／187 warnings |
 | Debug／Release／Root Debug | 三者皆建置 PASS；Root versionName 維持 `12.1` |
-| Release 目標檔名 | `dist\Moonlight-KATO-12.1-kato.0.2.apk` |
-| Release APK 大小 | 7,990,614 bytes |
-| Release SHA-256 | `0825436FF0E54DEDD763779F7EA923ED90EE3E2A1B8D2A50FD1FB09E9AB0A556` |
+| Release 目標檔名 | `dist\Moonlight-KATO-12.1-kato.0.3.apk` |
+| Release APK 大小 | 7,997,033 bytes |
+| Release SHA-256 | `6BA45D62A1A30F9DC12E0770DEF6D655ED0178B0AEF038B3C3611B8C018EBB28` |
 | Release 簽章 readback | v1／v2 PASS；憑證 SHA-256 `d39be840d3ca9501310b561becf21f4f0459ebb617fc93915e1656f1410ca85f`；RSA 3072-bit |
-| Fold 安裝與實機驗收 | 尚未安裝／尚未驗收，不標示 PASS |
+| Fold 安裝 readback | 已以 `adb install -r` 覆蓋安裝至 `SM-F9760`；package、versionName、versionCode 正確且 `firstInstallTime` 不變；未清除 App data，Sunshine 配對待使用者開啟確認 |
+| F1～F12 實機驗收 | 待使用者驗收 |
+
+## v0.2 歷史建置收據
+
+| 項目 | 歷史結果 |
+|---|---|
+| Debug／Release 身分 | `12.1-kato.0.2-dev`／`12.1-kato.0.2`，versionCode `314002` |
+| Unit test | PASS，24 tests／0 failures／0 errors／0 skipped |
+| Lint | PASS，0 errors／187 warnings |
+| Debug／Release／Root Debug | 三者皆建置 PASS |
+| Release APK | 7,990,614 bytes；SHA-256 `0825436FF0E54DEDD763779F7EA923ED90EE3E2A1B8D2A50FD1FB09E9AB0A556` |
+| Release 簽章 | v1／v2 PASS；相同 RSA 3072-bit KATO 憑證 |
+| 實機結果 | 已安裝至 Fold；使用者回報目前功能正常 |
+| 本機 tag | `kato-v0.2.0` |
 
 ## v0.1 歷史建置收據
 
@@ -127,4 +142,4 @@ Debug 靜態 readback：package `tw.kato.moonlight.debug`、label `Moonlight KAT
 
 Root Debug 相容性 readback：package `com.limelight.root.debug`、label `Moonlight (Root Debug)`、versionName `12.1`、versionCode `314`。KATO 工具列 listener、顯示條件及偏好項目均在 root flavor 停用。
 
-上述大小、雜湊與 readback 全部屬於 v0.1，不得視為 v0.2 產物資訊。v0.1 已由使用者完成實際使用測試並確認核心功能正常；v0.2 仍須另行安裝與驗收。
+上述大小、雜湊與 readback 全部屬於 v0.1，不得視為較新版本的產物資訊。v0.1 已由使用者完成實際使用測試並確認核心功能正常；v0.2 後續亦已安裝並由使用者回報功能正常。v0.3 已完成覆蓋安裝與身分 readback，F1～F12 功能仍待使用者驗收。
