@@ -39,10 +39,10 @@
 
 | 區域 | 驗收項目 | 狀態／證據 |
 |---|---|---|
-| 安裝與身分 | KATO Release v0.5 覆蓋安裝；package、versionName、versionCode 正確 | 待 ADB 重新連線 |
-| 資料保留 | 覆蓋安裝不得改變 `firstInstallTime`，且不得清除 App data | 待 ADB 重新連線 |
-| 自訂解析度入口 | 基本設定顯示繁中「自訂解析度」；root 不顯示 | 待使用者驗收 |
-| 對話框 | 寬高欄位可捲動、長字與鍵盤不裁切；取消零寫入；錯誤時不關閉 | 待使用者驗收 |
+| 安裝與身分 | KATO Release v0.5 覆蓋安裝；package、versionName、versionCode 正確 | PASS；`SM-F9760`／`12.1-kato.0.5`／`314005` |
+| 資料保留 | 覆蓋安裝不得改變 `firstInstallTime`，且不得清除 App data | PASS；時間維持 `2026-08-15 01:52:17`，既有電腦項目仍可見 |
+| 自訂解析度入口 | 基本設定顯示繁中「自訂解析度」；root 不顯示 | nonRoot PASS；root runtime 靜態／編譯驗證 PASS，root 實機 N/A |
+| 對話框 | 寬高欄位可捲動、長字與鍵盤不裁切；取消零寫入；錯誤時不關閉 | 基本顯示與目前值 `2520 × 1080` 預填 PASS；完整錯誤互動待使用者驗收 |
 | 驗證提示 | 空白、非整數、奇數、超出範圍與超過 8K 總像素均顯示正確繁中提示 | 待使用者驗收 |
 | 保存與重啟 | 儲存後清單選中「自訂（W × H）」；離開設定或重啟 App 後仍保留 | 待使用者驗收 |
 | 自訂串流 | 以 2520×1080、2504×2256 或其他主機已支援尺寸完整重連，Sunshine／效能統計顯示相同值 | 待使用者驗收 |
@@ -76,4 +76,4 @@ Moonlight Android 目前沒有 client 端 pinch-to-zoom：兩指操作在現有 
 
 ## 人工關卡
 
-v0.5 已沿用相同 release package 與 keystore，因此可用 `adb install -r` 覆蓋既有 KATO Release 並保留 App data。當前 ADB 清單無裝置，安裝 readback、自訂對話框目視檢查、保存重啟與實際串流協商仍是人工關卡。浮動 Samsung Keyboard 模式不列入 v0.5 保證。
+v0.5 已沿用相同 release package 與 keystore，並以 `adb install -r` 成功覆蓋既有 KATO Release；版本、首次安裝時間、首頁電腦項目、冷啟動與自訂對話框均完成 readback／smoke。保存重啟、所有錯誤提示與實際串流協商仍由使用者驗收。浮動 Samsung Keyboard 模式不列入 v0.5 保證。

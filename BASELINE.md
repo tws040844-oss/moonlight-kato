@@ -21,7 +21,7 @@ v0.4 在 KATO nonRoot 的解析度清單新增兩個固定選項：`2184x1228`�
 
 v0.3 在 v0.2 的分組快捷鍵選單新增第五組「功能鍵」，提供 F1～F12 單次點按，並可與已鎖定的 Ctrl／Shift 組合。F1～F12 仍經 `KeyboardTranslator` 轉換：Windows VK 為 `0x70`～`0x7B`，送出的 keyMap 為 `0x8070`～`0x807B`，未修改 native input 或串流協定。
 
-v0.2 已由使用者在 Fold／Windows 11 串流環境回報目前功能正常，並建立本機 tag `kato-v0.2.0`。v0.3 已以 `adb install -r` 覆蓋安裝至 `SM-F9760`，package 與版本 readback 正確、`firstInstallTime` 不變且未執行資料清除。v0.4 已完成建置與靜態驗證。v0.5 已完成自動化驗證與產物 readback；當前 ADB 清單無裝置，因此不宣稱已安裝，編輯器 UI、Fold 顯示與實際串流協商仍待實機驗收。
+v0.2 已由使用者在 Fold／Windows 11 串流環境回報目前功能正常，並建立本機 tag `kato-v0.2.0`。v0.3 已以 `adb install -r` 覆蓋安裝至 `SM-F9760`。v0.4 已完成建置與靜態驗證。v0.5 已覆蓋安裝至同一台 `SM-F9760`：package、versionName、versionCode 正確，`firstInstallTime` 維持 `2026-08-15 01:52:17`，既有電腦項目仍出現在首頁。設定頁與自訂對話框已完成實機 smoke；實際儲存自訂值與串流協商留給使用者驗收。
 
 ## App 身分
 

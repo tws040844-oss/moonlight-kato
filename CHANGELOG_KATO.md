@@ -12,7 +12,7 @@
 - Release APK：`dist\Moonlight-KATO-12.1-kato.0.5.apk`，8,007,881 bytes，SHA-256 `3F60C2F8D146A934E68DAB7BF7EBF83E5CF201BC12988D92E20C15E129BB95F7`。
 - Release 簽章 readback：v1／v2 PASS；憑證 SHA-256 `d39be840d3ca9501310b561becf21f4f0459ebb617fc93915e1656f1410ca85f`；RSA 3072-bit；APK 內嵌 revision 為 `f6974088ff24035cfb158f56ba54d0784934a902`。
 
-實際串流仍要求 Sunshine 主機顯示器或 VDD 支援相同解析度，且儲存後必須完整中止並重新連線。當前 ADB 清單無裝置，因此不宣稱 v0.5 已安裝；覆蓋安裝、對話框顯示、保存重啟與串流 readback 尚待 Fold 實機驗收。
+實際串流仍要求 Sunshine 主機顯示器或 VDD 支援相同解析度，且儲存後必須完整中止並重新連線。v0.5 已以 `adb install -r` 覆蓋安裝至 `SM-F9760`；readback 為 `12.1-kato.0.5`／`314005`，`firstInstallTime` 未變，既有電腦項目仍可見。App 冷啟動無 Fatal，繁中入口與對話框實機顯示正常並預填目前 `2520 × 1080`；保存重啟與實際串流 readback 留給使用者驗收。
 
 ## 0.4.0（解析度實機驗收待完成）
 

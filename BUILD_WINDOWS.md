@@ -85,7 +85,9 @@ keyPassword=<secret>
 | Release SHA-256 | `3F60C2F8D146A934E68DAB7BF7EBF83E5CF201BC12988D92E20C15E129BB95F7` |
 | Release 簽章 readback | v1／v2 PASS；憑證 SHA-256 `d39be840d3ca9501310b561becf21f4f0459ebb617fc93915e1656f1410ca85f`；RSA 3072-bit |
 | APK 內嵌 revision | `f6974088ff24035cfb158f56ba54d0784934a902` |
-| 實機安裝／UI／串流協商 | ADB 目前無裝置；尚未安裝，待 Fold 重新連線後驗收 |
+| Fold 安裝 readback | `adb install -r` PASS；`SM-F9760`／`12.1-kato.0.5`／`314005`；`firstInstallTime` 維持 `2026-08-15 01:52:17`；既有電腦項目仍可見 |
+| 實機 UI smoke | App 冷啟動 PASS、無 Fatal；繁中「自訂解析度」列與對話框可見，寬高預填目前 `2520 × 1080` |
+| 儲存／串流協商 | 待使用者選擇尺寸並完整重連後驗收 |
 
 ## v0.4 解析度變更
 
