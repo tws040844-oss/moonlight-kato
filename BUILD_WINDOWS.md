@@ -59,6 +59,30 @@ keyPassword=<secret>
 .\gradlew.bat :app:assembleRootDebug
 ```
 
+## v0.6 應用程式名稱自動解析度
+
+- KATO nonRoot 在「基本設定」新增「自動套用應用程式名稱解析度」（`checkbox_auto_app_resolution`，預設啟用）；root flavor 會移除該偏好項目且停用該功能。
+- 搭配 Sunshine 項目名稱內的尺寸標註（如 `Desktop｜Fold8U 展開直向 (效率 1968×2184)`），開啟串流時自動套用對應寬高，並依尺寸比例自動切換手機橫向／直向，不需每次先到設定頁改解析度。
+- 當次套用不會覆蓋偏好設定內保存的預設解析度；若項目名稱未包含解析度（如 `Desktop｜原生雙螢幕`），自動沿用設定頁選項。
+- 若當前位元率為系統預設值，會依新解析度與 FPS 自動計算；若已手動調整過位元率，則保留手動設定值。
+
+## v0.6 產物狀態
+
+| 項目 | 目前狀態 |
+|---|---|
+| Debug 身分 | `tw.kato.moonlight.debug`／`12.1-kato.0.6-dev`／versionCode `314006` |
+| Release 身分 | `tw.kato.moonlight.unofficial`／`12.1-kato.0.6`／versionCode `314006` |
+| Unit test | PASS；nonRoot、root 各 51 tests／0 failures／0 errors／0 skipped |
+| Lint | PASS；nonRoot 0 errors／188 warnings，root 0 errors／189 warnings |
+| Debug／Release／Root Debug | 三者皆建置 PASS；Root versionName 維持 `12.1` |
+| Release 目標檔名 | `dist\Moonlight-KATO-12.1-kato.0.6.apk` |
+| Release APK 大小 | 8,009,205 bytes |
+| Release SHA-256 | `2D11CC6F5E8C8A36F1CA6C6D9D1DBB4548A1128C5380268E77C7BEAFC03083D0` |
+| Release 簽章 readback | v1／v2 PASS；憑證 SHA-256 `d39be840d3ca9501310b561becf21f4f0459ebb617fc93915e1656f1410ca85f`；RSA 3072-bit |
+| Fold 安裝 readback | `adb install -r` PASS；`SM-F9760`（`RFGL73HJWQY`）／`12.1-kato.0.6`／`314006`；`firstInstallTime` 維持 `2026-08-15 01:52:17` |
+| 冷啟動 smoke | PASS；PID `8869`、AndroidRuntime 無錯誤 |
+| Sunshine 實機串流協商 | 待使用者點選橫／直向項目後驗收 |
+
 ## v0.5 自訂解析度
 
 - KATO nonRoot 在「基本設定」提供「自訂解析度」編輯器，可分別輸入寬度與高度。

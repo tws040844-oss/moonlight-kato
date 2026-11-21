@@ -1,6 +1,6 @@
-# Moonlight KATO v0.5 測試矩陣
+# Moonlight KATO v0.6 測試矩陣
 
-狀態標記：`PASS`、`FAIL`、`BLOCKED`、`待使用者驗收`、`N/A`。自動化測試結果與 Fold 人工驗收分開計算；既有版本的正常使用回報不得直接視為 v0.5 自訂解析度 UI 與串流協商的實機 PASS。
+狀態標記：`PASS`、`FAIL`、`BLOCKED`、`待使用者驗收`、`N/A`。自動化測試結果與 Fold 人工驗收分開計算；既有版本的正常使用回報不得直接視為 v0.6 應用程式名稱自動解析度與方向切換的實機 PASS。
 
 ## 自動化測試
 
@@ -30,8 +30,10 @@
 | 自訂 Native 分類 | `custom:2504x2256` 與其他自訂尺寸均視為非 Native；相同 bare 尺寸仍可維持 Native | PASS |
 | 自訂位元率 | 2184×1228、2496×1404、2504×2256、2520×1080、8K 的 30／60／120 FPS 計算符合既有公式 | PASS |
 | Root prefix 隔離 | root 遇到 `custom:` 時安全回復 1280×720，不崩潰、不啟用 KATO 自訂行為 | PASS |
-| JUnit | nonRoot、root 各 46 tests／0 failures／0 errors／0 skipped | PASS |
-| Lint | nonRoot 0 errors／187 warnings；root 0 errors／188 warnings | PASS |
+| 名稱自動解析度擷取 | 支援 `×`/`x`/`*`（如 `1968×2184`），忽略 `16:9`/`2K`/`4K`、奇數與超限值，取最後一組有效尺寸 | PASS |
+| 名稱自動解析度位元率與隔離 | 預設位元率隨尺寸重算、手動位元率保留；`root` 或停用開關時零改動 | PASS |
+| JUnit | nonRoot、root 各 51 tests／0 failures／0 errors／0 skipped | PASS |
+| Lint | nonRoot 0 errors／188 warnings；root 0 errors／189 warnings | PASS |
 | Debug／Release | `assembleNonRootDebug`、`assembleNonRootRelease` | PASS |
 | Root flavor 回歸 | `assembleRootDebug`，package `com.limelight.root.debug`、versionName `12.1` | PASS |
 
@@ -39,8 +41,10 @@
 
 | 區域 | 驗收項目 | 狀態／證據 |
 |---|---|---|
-| 安裝與身分 | KATO Release v0.5 覆蓋安裝；package、versionName、versionCode 正確 | PASS；`SM-F9760`／`12.1-kato.0.5`／`314005` |
-| 資料保留 | 覆蓋安裝不得改變 `firstInstallTime`，且不得清除 App data | PASS；時間維持 `2026-08-15 01:52:17`，既有電腦項目仍可見 |
+| 安裝與身分 | KATO Release v0.6 覆蓋安裝；package、versionName、versionCode 正確 | PASS；`SM-F9760`／`12.1-kato.0.6`／`314006` |
+| 資料保留 | 覆蓋安裝不得改變 `firstInstallTime`，且不得清除 App data | PASS；時間維持 `2026-08-15 01:52:17` |
+| 冷啟動 smoke | `monkey` 啟動主畫面，無 `AndroidRuntime:E` crash | PASS；PID `8869` |
+| 名稱自動解析度串流 | 點選 `1968×2184` 直向與 `2184×1968` 橫向項目時自動套用解析度與方向並顯示提示 | 待使用者驗收 |
 | 自訂解析度入口 | 基本設定顯示繁中「自訂解析度」；root 不顯示 | nonRoot PASS；root runtime 靜態／編譯驗證 PASS，root 實機 N/A |
 | 對話框 | 寬高欄位可捲動、長字與鍵盤不裁切；取消零寫入；錯誤時不關閉 | 基本顯示與目前值 `2520 × 1080` 預填 PASS；完整錯誤互動待使用者驗收 |
 | 驗證提示 | 空白、非整數、奇數、超出範圍與超過 8K 總像素均顯示正確繁中提示 | 待使用者驗收 |

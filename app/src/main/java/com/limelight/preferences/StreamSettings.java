@@ -471,6 +471,11 @@ public class StreamSettings extends Activity {
                 if (basicCategory != null && customResolutionPreference != null) {
                     basicCategory.removePreference(customResolutionPreference);
                 }
+                Preference autoAppResolutionPreference =
+                        findPreference(PreferenceConfiguration.AUTO_APP_RESOLUTION_PREF_STRING);
+                if (basicCategory != null && autoAppResolutionPreference != null) {
+                    basicCategory.removePreference(autoAppResolutionPreference);
+                }
 
                 PreferenceCategory inputCategory =
                         (PreferenceCategory) findPreference("category_input_settings");

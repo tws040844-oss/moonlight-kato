@@ -1,5 +1,19 @@
 # Moonlight KATO 變更記錄
 
+## 0.6.0（依 Sunshine 項目名稱自動套用解析度＋實機安裝完成）
+
+- 版本更新為 Release `12.1-kato.0.6`、Debug `12.1-kato.0.6-dev`，versionCode `314006`；package ID 與 release signing identity 維持不變。
+- 「基本設定」新增 `checkbox_auto_app_resolution`（「自動套用應用程式名稱解析度」），`nonRoot` 預設開啟；`root` flavor 移除該選項並維持官方隔離。
+- 新增 `AppResolutionParser`：啟動串流時自動解析 `EXTRA_APP_NAME` 中的 `寬×高` / `寬x高` / `寬*高`（支援全形 `×`、半形 `x`/`*`，取最後一組通過 256–8192、偶數、總像素 ≤ `7680 × 4320` 驗證的尺寸），並顯示短暫提示「已自動套用解析度 W × H」。
+- 僅在當次串流暫時套用解析度（`customResolution = true`），不覆寫「基本設定」中保存的預設解析度；找不到尺寸的項目（如「Desktop｜原生雙螢幕」）自動沿用原本設定。
+- 若位元率維持在原預設值，自動依新解析度與 FPS 重新計算預設位元率；若使用者已手動自訂位元率則保留原值。
+- `Game.setPreferredOrientationForCurrentDisplay()` 依據自動套用解析度的橫直向自動鎖定方向：直向（`高 > 寬`，例如 `1968×2184`、`2256×2504`）自動請求直向（`SCREEN_ORIENTATION_USER_PORTRAIT`），橫向（`寬 > 高`）請求橫向（啟用螢幕虛擬手把 OSC 時維持橫向）。
+- `.gitignore` 新增 `evidence/` 排除本機裝置實機截圖與 UI dump，準備公開發布至個人 GitHub。
+- nonRoot、root 各 51 項單元測試全數通過；lint 分別為 0 errors／188 warnings 與 0 errors／189 warnings；nonRoot Debug、nonRoot Release、Root Debug 均建置 PASS。
+- Release APK：`dist\Moonlight-KATO-12.1-kato.0.6.apk`，8,009,205 bytes，SHA-256 `2D11CC6F5E8C8A36F1CA6C6D9D1DBB4548A1128C5380268E77C7BEAFC03083D0`。
+- Release 簽章 readback：v1／v2 PASS；憑證 SHA-256 `d39be840d3ca9501310b561becf21f4f0459ebb617fc93915e1656f1410ca85f`；RSA 3072-bit。
+- 已透過 USB ADB 以 `adb install -r` 覆蓋安裝至 `SM-F9760`（`RFGL73HJWQY`）；readback 為 `12.1-kato.0.6`／`314006`，`firstInstallTime` 維持 `2026-08-15 01:52:17`，冷啟動 PID `8869` 無 Fatal 崩潰；Sunshine 串流橫直向與自動解析度實機操作留給使用者驗收。
+
 ## 0.5.0（自訂解析度實機驗收待完成）
 
 - 版本更新為 Release `12.1-kato.0.5`、Debug `12.1-kato.0.5-dev`，versionCode `314005`；package ID 與 release signing identity 維持不變。

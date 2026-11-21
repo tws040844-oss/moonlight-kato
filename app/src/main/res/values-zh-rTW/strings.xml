@@ -123,6 +123,9 @@
     <string name="custom_resolution_error_odd_dimension">寬度與高度都必須是偶數。</string>
     <string name="custom_resolution_error_too_many_pixels">總像素不可超過 7680 × 4320。</string>
     <string name="custom_resolution_saved">已設定自訂解析度 %1$d × %2$d；重新連線後生效。</string>
+    <string name="title_auto_app_resolution">自動套用應用程式名稱解析度</string>
+    <string name="summary_auto_app_resolution">啟動串流時若 Sunshine 項目名稱含解析度（例如 1968×2184），自動套用該尺寸與方向</string>
+    <string name="auto_app_resolution_applied">已自動套用解析度 %1$d × %2$d</string>
     <string name="title_fps_list">視訊影格速率</string>
     <string name="summary_fps_list">提高影格速率以取得更順暢的視訊串流，降低可在低效能裝置上取得更好的串流體驗。</string>
     <string name="title_seekbar_bitrate">視訊位元速率</string>

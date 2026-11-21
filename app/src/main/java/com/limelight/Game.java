@@ -28,6 +28,7 @@ import com.limelight.nvstream.input.ControllerPacket;
 import com.limelight.nvstream.input.KeyboardPacket;
 import com.limelight.nvstream.input.MouseButtonPacket;
 import com.limelight.nvstream.jni.MoonBridge;
+import com.limelight.preferences.AppResolutionParser;
 import com.limelight.preferences.GlPreferences;
 import com.limelight.preferences.PreferenceConfiguration;
 import com.limelight.ui.GameGestures;
@@ -232,6 +233,9 @@ public class Game extends Activity implements SurfaceHolder.Callback,
 
         // Read the stream preferences
         prefConfig = PreferenceConfiguration.readPreferences(this);
+        appName = Game.this.getIntent().getStringExtra(EXTRA_APP_NAME);
+        boolean autoAppliedAppResolution = AppResolutionParser.applyAppNameResolution(
+                prefConfig, appName, BuildConfig.ROOT_BUILD);
         tombstonePrefs = Game.this.getSharedPreferences("DecoderTombstone", 0);
 
         // Enter landscape unless we're on a square screen
@@ -351,6 +355,10 @@ public class Game extends Activity implements SurfaceHolder.Callback,
         if (connMgr.isActiveNetworkMetered()) {
             displayTransientMessage(getResources().getString(R.string.conn_metered));
         }
+        if (autoAppliedAppResolution) {
+            displayTransientMessage(getResources().getString(
+                    R.string.auto_app_resolution_applied, prefConfig.width, prefConfig.height));
+        }
 
         // Make sure Wi-Fi is fully powered up
         WifiManager wifiMgr = (WifiManager) getApplicationContext().getSystemService(Context.WIFI_SERVICE);
@@ -370,7 +378,6 @@ public class Game extends Activity implements SurfaceHolder.Callback,
             e.printStackTrace();
         }
 
-        appName = Game.this.getIntent().getStringExtra(EXTRA_APP_NAME);
         pcName = Game.this.getIntent().getStringExtra(EXTRA_PC_NAME);
 
         String host = Game.this.getIntent().getStringExtra(EXTRA_HOST);
@@ -630,6 +637,17 @@ public class Game extends Activity implements SurfaceHolder.Callback,
     }
 
     private void setPreferredOrientationForCurrentDisplay() {
+        if (prefConfig.autoAppliedAppResolution) {
+            if (prefConfig.onscreenController || prefConfig.width > prefConfig.height) {
+                setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_USER_LANDSCAPE);
+                return;
+            }
+            if (prefConfig.height > prefConfig.width) {
+                setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_USER_PORTRAIT);
+                return;
+            }
+        }
+
         Display display = getWindowManager().getDefaultDisplay();
 
         // For semi-square displays, we use more complex logic to determine which orientation to use (if any)

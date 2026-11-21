@@ -163,6 +163,9 @@
     <string name="custom_resolution_error_odd_dimension">The width and height must both be even numbers.</string>
     <string name="custom_resolution_error_too_many_pixels">The total resolution must not exceed 7680 × 4320 pixels.</string>
     <string name="custom_resolution_saved">Custom resolution set to %1$d × %2$d. Reconnect the stream to apply it.</string>
+    <string name="title_auto_app_resolution">Auto resolution from app name</string>
+    <string name="summary_auto_app_resolution">Automatically use a WxH resolution found in the Sunshine app name (for example 1968×2184) and match orientation</string>
+    <string name="auto_app_resolution_applied">Auto resolution: %1$d × %2$d</string>
     <string name="title_native_res_dialog">Native Resolution Warning</string>
     <string name="text_native_res_dialog">Native resolution and/or FPS may not be supported by the streaming server. You will probably need to configure a matching custom display mode for the host PC manually.\n\nIf you choose to create a custom resolution in NVIDIA Control Panel to match your screen settings, please ensure you have read and understood NVIDIA\'s warning regarding possible monitor damage, PC instability, and other potential problems.\n\nWe are not responsible for any problems resulting from creating a custom resolution on your PC.\n\nIt may be that your monitor does not support a necessary display configuration. If so, you may try to set up a virtual monitor. Finally, if your device or host PC does not support streaming at a specific resolution or refresh rate, you\'re out of luck unfortunately.</string>
     <string name="title_fps_list">Video frame rate</string>

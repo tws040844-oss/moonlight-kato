@@ -5,13 +5,17 @@
 - 上游 repository：`https://github.com/moonlight-stream/moonlight-android.git`
 - 上游 commit：`f10085f552b367cf7203007693d91c322a0a2936`
 - 本機分支：`feature/pc-key-toolbar`
-- GitHub Fork／遠端推送：無
+- GitHub Fork／遠端：`https://github.com/tws040844-oss/moonlight-kato`（`upstream` 指向官方 repo）
 - `moonlight-common-c`：`8af4562af672dd6b9ed28553ead172984fd9a683`
 - `enet`：`d3a323fc8b9559786ee059205db74e8027c756f7`
 
 ## 範圍界線
 
-KATO v0.5 功能只在 Android `nonRoot` client 啟用。不修改 Sunshine、VDD、Moonlight native code、串流協定、root flavor 的身分與既有輸入路徑、`namespace 'com.limelight'` 或 Java package。共用 `main` source set 中的 UI class 與資源仍會參與 root 編譯，但 root runtime 會移除 KATO 自訂解析度與工具列偏好項目，並拒絕 `custom:` 編碼值；root flavor 的 versionName 維持 `12.1`。
+KATO v0.6 功能只在 Android `nonRoot` client 啟用。不修改 Sunshine、VDD、Moonlight native code、串流協定、root flavor 的身分與既有輸入路徑、`namespace 'com.limelight'` 或 Java package。共用 `main` source set 中的 UI class 與資源仍會參與 root 編譯，但 root runtime 會移除 KATO 自動應用程式解析度、自訂解析度與工具列偏好項目，並拒絕 `custom:` 編碼值；root flavor 的 versionName 維持 `12.1`。
+
+v0.6 在 KATO nonRoot 的「基本設定」新增「自動套用應用程式名稱解析度」（預設啟用）。啟動 `Game` 串流時，`AppResolutionParser` 會從 Sunshine 傳來的應用程式名稱自動擷取最後一組符合 256–8192、偶數與總像素 ≤ `7680 × 4320` 規範的 `W×H` 解析度（支援 `×`、`x`、`*`），僅於當次串流工作階段套用並依橫／直向自動鎖定螢幕方向（`SCREEN_ORIENTATION_USER_PORTRAIT` 或 `USER_LANDSCAPE`），不覆寫原設定頁保存值。若原本位元率為系統預設值，則同步依新解析度與 FPS 重算；若使用者已手動自訂位元率則保留。
+
+v0.6 已於 2026-11-21 完成測試、建置並透過 USB ADB `adb install -r` 覆蓋安裝至 `SM-F9760`（`RFGL73HJWQY`），`firstInstallTime` 維持 `2026-08-15 01:52:17`，冷啟動正常（PID `8869`）；實際透過 Sunshine 串流驗證各橫直向尺寸留給使用者驗收。
 
 v0.5 在 KATO nonRoot 的「基本設定」新增「自訂解析度」編輯器。使用者可分別輸入寬度與高度，儲存後以 `custom:<width>x<height>` 記錄於解析度選單，例如 `custom:2504x2256`。不限長寬比或橫直方向，但寬、高各自必須介於 256–8192 像素、均為偶數，且總像素數不得超過 `7680 × 4320`（33,177,600 像素）。儲存時會依尺寸與 FPS 重算預設位元率；無效或損壞的 `custom:` 偏好值不會使 App 崩潰，而會回復為預設 `1280x720`。
 
@@ -27,12 +31,12 @@ v0.2 已由使用者在 Fold／Windows 11 串流環境回報目前功能正常�
 
 | Variant | Package | App 名稱 | versionName | versionCode |
 |---|---|---|---|---:|
-| `nonRootDebug` | `tw.kato.moonlight.debug` | Moonlight KATO Dev | `12.1-kato.0.5-dev` | 314005 |
-| `nonRootRelease` | `tw.kato.moonlight.unofficial` | Moonlight KATO | `12.1-kato.0.5` | 314005 |
+| `nonRootDebug` | `tw.kato.moonlight.debug` | Moonlight KATO Dev | `12.1-kato.0.6-dev` | 314006 |
+| `nonRootRelease` | `tw.kato.moonlight.unofficial` | Moonlight KATO | `12.1-kato.0.6` | 314006 |
 
 新 application ID 使用獨立 App data；首次連線必須重新與 Sunshine 配對並重新設定串流選項。
 
-v0.4 歷史版本為 Debug `12.1-kato.0.4-dev`／Release `12.1-kato.0.4`，versionCode `314004`。v0.3 歷史版本為 Debug `12.1-kato.0.3-dev`／Release `12.1-kato.0.3`，versionCode `314003`。v0.2 歷史版本為 Debug `12.1-kato.0.2-dev`／Release `12.1-kato.0.2`，versionCode `314002`；其本機 tag 為 `kato-v0.2.0`。v0.1 歷史版本為 Debug `12.1-kato.0.1-dev`／Release `12.1-kato.0.1`，versionCode `314001`；其本機基準 tag 為 `kato-v0.1.0`。
+v0.5 歷史版本為 Debug `12.1-kato.0.5-dev`／Release `12.1-kato.0.5`，versionCode `314005`。v0.4 歷史版本為 Debug `12.1-kato.0.4-dev`／Release `12.1-kato.0.4`，versionCode `314004`。v0.3 歷史版本為 Debug `12.1-kato.0.3-dev`／Release `12.1-kato.0.3`，versionCode `314003`。v0.2 歷史版本為 Debug `12.1-kato.0.2-dev`／Release `12.1-kato.0.2`，versionCode `314002`；其本機 tag 為 `kato-v0.2.0`。v0.1 歷史版本為 Debug `12.1-kato.0.1-dev`／Release `12.1-kato.0.1`，versionCode `314001`；其本機基準 tag 為 `kato-v0.1.0`。
 
 ## 觸控縮放界線
 
